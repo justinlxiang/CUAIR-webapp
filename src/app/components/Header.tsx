@@ -13,7 +13,7 @@ export default function Header() {
       <NavigationMenu>
         <NavigationMenuList className="gap-3">
           <NavigationMenuItem className="ml-4">
-            <Link href="/" legacyBehavior passHref>
+            <Link href="/obstacle-avoidance" legacyBehavior passHref>
               <NavigationMenuLink className={`${navigationMenuTriggerStyle()} bg-gray-800 text-white hover:text-primary transition-colors duration-200 font-medium`}>
                 Obstacle Avoidance
               </NavigationMenuLink>
