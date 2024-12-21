@@ -1,90 +1,68 @@
-'use client'; // Necessary for React components in the App Router
+'use client';
 
+import dynamic from 'next/dynamic';
 import React, { useEffect, useState } from 'react';
-import { generateLidarData } from '../utils/lidarSimulator';
-import { Config } from 'plotly.js';
+import { fetchLidarData } from '../api/api';
+import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Text } from 'recharts';
 import styles from '../styles/LidarPlot.module.css';
 
-import Plot from 'react-plotly.js';
-
-const LidarPlot: React.FC = () => {
-  const [data, setData] = useState<{ x: number; y: number }[]>([]);
+// Wrap the component with dynamic import
+const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
+  const [points, setPoints] = useState<{x: number, y: number, angle: number, distance: number}[]>([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const lidarData = generateLidarData();
-      setData(lidarData);
-    }, 1000); // Update every 500ms
+    const updateLidarData = async () => {
+      try {
+        const data = await fetchLidarData();
+        // Extract points array from the response
+        setPoints(data.points || []);
+      } catch (error) {
+        console.error('Error updating lidar data:', error);
+      }
+    };
+
+    updateLidarData(); // Initial fetch
+    const interval = setInterval(updateLidarData, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const xData = data.map((point) => point.x);
-  const yData = data.map((point) => point.y);
-
-  // Memoize the layout and config to prevent re-renders from resetting the view
-  const layout = React.useMemo(() => ({
-    title: 'Live Lidar Data',
-    paper_bgcolor: 'black',
-    plot_bgcolor: 'black',
-    font: {
-      family: 'Verdana, Arial, sans-serif',
-      color: '#FFFFFF',
-      size: 16,
-      bold: true
-    },
-    xaxis: { 
-      title: 'X (meters)',
-      gridcolor: '#333333',
-      zerolinecolor: '#666666',
-      tickcolor: '#ff4d4d',  
-      linecolor: '#ff4d4d' 
-    },
-    yaxis: { 
-      title: 'Y (meters)',
-      gridcolor: '#333333',
-      zerolinecolor: '#666666',
-      tickcolor: '#ff4d4d', 
-      linecolor: '#ff4d4d'  
-    },
-    width: 700,
-    height: 700,
-  }), []); // Empty dependency array means this will only be created once
-
-  const config: Partial<Config> = React.useMemo(() => ({
-    scrollZoom: true,
-    displayModeBar: true,
-    responsive: true,
-    modeBarButtonsToRemove: ['select2d', 'lasso2d'],
-  }), []);
-
   return (
     <div className={styles.plotContainer}>
-      <Plot
-        data={[
-          {
-            x: xData,
-            y: yData,
-            mode: 'markers',
-            marker: { 
-              color: '#00FFFF',
-              size: 6,
-              opacity: .8,
-              symbol: 'circle',
-              line: {
-                color: '#00FFFF',
-                width: 1
-              }
-            },
-            type: 'scatter',
-          },
-        ]}
-        layout={layout}
-        config={config}
-        useResizeHandler={true}
-        className={styles.plot}
-      />
+      <h1 className="text-2xl font-bold text-white text-center">LIDAR Data</h1>
+      <ScatterChart
+        width={700}
+        height={700}
+        margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke="#333333" />
+        <XAxis 
+          type="number" 
+          dataKey="x" 
+          name="X" 
+          unit="m"
+          stroke="#ff4d4d"
+          label={{ value: 'X (meters)', position: 'bottom', fill: '#FFFFFF' }}
+          // domain={[-10, 10]} // Add fixed domain
+        />
+        <YAxis 
+          type="number" 
+          dataKey="y" 
+          name="Y" 
+          unit="m"
+          stroke="#ff4d4d"
+          label={{ value: 'Y (meters)', angle: -90, position: 'left', fill: '#FFFFFF' }}
+          // domain={[-10, 10]} // Add fixed domain
+        />
+        <Scatter 
+          name="Lidar Points" 
+          data={points} 
+          fill="#00FFFF"
+          opacity={0.8}
+          isAnimationActive={false}
+        />
+      </ScatterChart>
     </div>
   );
-};
+}), { ssr: false });
 
 export default LidarPlot;
