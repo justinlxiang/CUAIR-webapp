@@ -3,12 +3,31 @@
 import dynamic from 'next/dynamic';
 import React, { useEffect, useState } from 'react';
 import { wsClient } from '../api/websocket';
-import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Text } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ReferenceArea } from 'recharts';
 import styles from '../styles/LidarPlot.module.css';
 
-// Wrap the component with dynamic import
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Cluster {
+  center: [number, number];
+  width: number;
+  height: number;
+  points: number[][];
+  id?: number;
+  movement?: number;
+}
+
+interface LidarData {
+  points: number[][];
+  clusters: Cluster[];
+  radius_threshold: number;
+}
+
 const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
-  const [points, setPoints] = useState<{x: number, y: number, angle: number, distance: number}[]>([]);
+  const [lidarData, setLidarData] = useState<LidarData | null>(null);
 
   useEffect(() => {
     console.log('LidarPlot: Connecting to WebSocket');
@@ -16,18 +35,22 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
 
     const handleLidarData = (data: any) => {
       if (data.type === 'lidar') {
-        // console.log('LidarPlot: Received websocket message:', data.data);
-        setPoints(data.data);
+        setLidarData(data.data);
       }
     };
     
     wsClient.subscribe('lidar', handleLidarData);
-    console.log('LidarPlot: Subscribed to lidar topic');
-
+    
     return () => {
       wsClient.unsubscribe('lidar', handleLidarData);
     };
   }, []);
+
+  const formatPoints = (points: number[][]): Point[] => {
+    return points.map(([x, y]) => ({ x, y }));
+  };
+
+  if (!lidarData) return <div>Loading...</div>;
 
   return (
     <div className={styles.plotContainer}>
@@ -45,7 +68,8 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
           unit="m"
           stroke="#ff4d4d"
           label={{ value: 'X (meters)', position: 'bottom', fill: '#FFFFFF' }}
-          // domain={[-10, 10]} // Add fixed domain
+          domain={[-20, 20]}
+          allowDataOverflow={true} // Prevent domain from auto-adjusting
         />
         <YAxis 
           type="number" 
@@ -54,15 +78,43 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
           unit="m"
           stroke="#ff4d4d"
           label={{ value: 'Y (meters)', angle: -90, position: 'left', fill: '#FFFFFF' }}
-          // domain={[-10, 10]} // Add fixed domain
+          domain={[-20, 20]}
+          allowDataOverflow={true} // Prevent domain from auto-adjusting
         />
+        {/* Plot all points */}
         <Scatter 
-          name="Lidar Points" 
-          data={points} 
+          data={formatPoints(lidarData.points)} 
           fill="#00FFFF"
-          opacity={0.8}
+          opacity={0.6}
           isAnimationActive={false}
         />
+        
+
+        {/* Plot clusters - simplified version */}
+        {lidarData.clusters.map((cluster, idx) => (
+          <Scatter
+            key={idx}
+            data={formatPoints(cluster.points)}
+            fill={`hsl(${(idx * 137) % 360}, 70%, 50%)`}
+            opacity={0.8}
+            isAnimationActive={false}
+          />
+        ))}
+
+        {/* Plot bounding boxes separately */}
+        {lidarData.clusters.map((cluster, idx) => (
+          <ReferenceArea
+            key={idx}
+            x1={cluster.center[0] - cluster.width/2}
+            x2={cluster.center[0] + cluster.width/2}
+            y1={cluster.center[1] - cluster.height/2}
+            y2={cluster.center[1] + cluster.height/2}
+            stroke={`hsl(${(idx * 137) % 360}, 70%, 50%)`}
+            strokeWidth={2}
+            strokeDasharray="5 5"
+            fill="none"
+          />
+        ))}
       </ScatterChart>
     </div>
   );

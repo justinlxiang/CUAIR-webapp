@@ -5,13 +5,14 @@ from typing import List, Dict
 import time
 import asyncio
 from fastapi.websockets import WebSocketDisconnect
+from obstacle_detection import ObstacleDetector
 
 app = FastAPI()
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -74,30 +75,32 @@ def generate_telemetry_data():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
+    detector = ObstacleDetector(simulation=True)
+    
     try:
         while True:
             try:
-                # Send both lidar and telemetry data
-                lidar_data = {"type": "lidar", "data": generate_lidar_points()}
+                # Get obstacle detection data
+                obstacle_data = detector.process_frame()
+                lidar_data = {"type": "lidar", "data": obstacle_data}
+                
+                # Get telemetry data
                 telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
                 
-                # Send messages only to the current websocket connection
+                # Send both types of data
                 success = await manager.send_message(websocket, lidar_data)
                 if success:
                     await manager.send_message(websocket, telemetry_data)
                 else:
-                    # If sending fails, close the connection
                     await websocket.close()
                     break
                 
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.1)  # 10 FPS
             
             except WebSocketDisconnect:
-                # Handle normal disconnection
                 manager.disconnect(websocket)
                 break
             except asyncio.CancelledError:
-                # Handle cancellation (e.g., during server shutdown)
                 manager.disconnect(websocket)
                 await websocket.close()
                 break
