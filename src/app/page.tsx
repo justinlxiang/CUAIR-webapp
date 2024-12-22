@@ -22,6 +22,8 @@ export default function Home() {
                   src="/images/obstacle-avoidance.jpg"
                   alt="Obstacle Avoidance"
                   fill
+                  priority
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="rounded-lg object-cover"
                 />
               </div>
@@ -37,6 +39,7 @@ export default function Home() {
                   src="/images/warning-system.jpg"
                   alt="Warning System"
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="rounded-lg object-cover"
                 />
               </div>
@@ -52,6 +55,7 @@ export default function Home() {
                   src="/images/system-status.jpg"
                   alt="System Status"
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="rounded-lg object-cover"
                 />
               </div>

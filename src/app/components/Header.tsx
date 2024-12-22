@@ -10,9 +10,16 @@ import {
 import Link from "next/link"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
-
+import React from "react"
 export default function Header() {
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+
+  // Only render theme toggle after mounting to avoid hydration mismatch
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const navigationItems = [
     { name: 'Home', href: '/' },
     { name: 'Obstacle Avoidance', href: '/obstacle-avoidance' },
@@ -35,12 +42,14 @@ export default function Header() {
           ))}
         </NavigationMenuList>
       </NavigationMenu>
-      <button
-        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        className="p-2 rounded-md bg-secondary text-secondary-foreground mr-4 hover:bg-secondary/80 transition-colors"
-      >
-        {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
+      {mounted && (
+        <button
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="p-2 rounded-md bg-secondary text-secondary-foreground mr-4 hover:bg-secondary/80 transition-colors"
+        >
+          {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+      )}
     </header>
   )
 }
