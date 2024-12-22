@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import Header from '../../components/Header';
+import Header from '../components/Header';
 
 interface SystemStats {
   memory: {

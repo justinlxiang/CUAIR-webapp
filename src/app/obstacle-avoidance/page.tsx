@@ -1,7 +1,7 @@
 import React from 'react';
-import LidarPlot from '../../components/LidarPlot';
+import LidarPlot from '../components/LidarPlot';
 import { Card } from "@/components/ui/card";
-import Header from '../../components/Header';
+import Header from '../components/Header';
 import styles from '../styles/Home.module.css';
 
 export default function Home() {

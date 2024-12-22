@@ -1,5 +1,5 @@
-import OrientationChart from '../../components/TelemetryChart';
-import Header from '../../components/Header';
+import OrientationChart from '../components/TelemetryChart';
+import Header from '../components/Header';
 
 export default function WarningSystem() {
     return (
