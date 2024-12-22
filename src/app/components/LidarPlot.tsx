@@ -58,7 +58,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
       <ScatterChart
         width={700}
         height={700}
-        margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+        margin={{ top: 20, right: 50, bottom: 20, left: 20 }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#333333" />
         <XAxis 

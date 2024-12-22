@@ -40,19 +40,19 @@ export default function System() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-black flex flex-col items-center p-6">
-        <h1 className="text-3xl font-bold mb-6 text-white">System Monitoring</h1>
+      <main className="min-h-screen bg-background flex flex-col items-center p-6">
+        <h1 className="text-3xl font-bold mb-6 text-foreground">System Monitoring</h1>
         
-        <Card className="w-full max-w-md bg-[#1a1a1a] border-gray-800">
+        <Card className="w-full max-w-md bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">System Information</CardTitle>
+            <CardTitle className="text-card-foreground">System Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {stats ? (
               <>
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-white">System Information</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-400">
+                  <h3 className="text-lg font-semibold text-card-foreground">System Information</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                     <span>Hostname:</span>
                     <span>{stats.hostname}</span>
                     <span>Platform:</span>
@@ -63,8 +63,8 @@ export default function System() {
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-white">Memory Usage</h3>
-                  <div className="flex justify-between text-sm text-gray-400">
+                  <h3 className="text-lg font-semibold text-card-foreground">Memory Usage</h3>
+                  <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Used</span>
                     <span>
                       {(stats.memory.used / 1024 / 1024 / 1024).toFixed(2)} / {(stats.memory.total / 1024 / 1024 / 1024).toFixed(2)} GB
@@ -72,32 +72,32 @@ export default function System() {
                   </div>
                   <Progress 
                     value={(stats.memory.used / stats.memory.total) * 100}
-                    className="h-2 bg-black [&>div]:bg-gray-400"
+                    className="h-2 bg-secondary [&>div]:bg-primary"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-white">CPU Usage</h3>
-                  <div className="flex justify-between text-sm text-gray-400">
+                  <h3 className="text-lg font-semibold text-card-foreground">CPU Usage</h3>
+                  <div className="flex justify-between text-sm text-muted-foreground">
                     <span>Average CPU</span>
                     <span>{stats.cpu.toFixed(1)}%</span>
                   </div>
                   <Progress 
                     value={stats.cpu} 
-                    className="h-2 bg-black [&>div]:bg-gray-400"
+                    className="h-2 bg-secondary [&>div]:bg-primary"
                   />
                   
                   <div className="mt-2">
-                    <h4 className="text-sm font-semibold text-white mb-2">CPU Cores</h4>
+                    <h4 className="text-sm font-semibold text-card-foreground mb-2">CPU Cores</h4>
                     {stats.cpuCores.map((usage, index) => (
                       <div key={index} className="mb-2">
-                        <div className="flex justify-between text-sm text-gray-400">
+                        <div className="flex justify-between text-sm text-muted-foreground">
                           <span>Core {index}</span>
                           <span>{usage.toFixed(1)}%</span>
                         </div>
                         <Progress 
                           value={usage} 
-                          className="h-2 bg-black [&>div]:bg-gray-400"
+                          className="h-2 bg-secondary [&>div]:bg-primary"
                         />
                       </div>
                     ))}
@@ -105,7 +105,7 @@ export default function System() {
                 </div>
               </>
             ) : (
-              <p className="text-gray-400">Loading system stats...</p>
+              <p className="text-muted-foreground">Loading system stats...</p>
             )}
           </CardContent>
         </Card>

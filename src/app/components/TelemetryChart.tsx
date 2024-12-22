@@ -45,18 +45,18 @@ const TelemetryChart = dynamic(() => Promise.resolve(function Chart() {
                     top: 20,
                     right: 30,
                     left: 20,
-                    bottom: 10,
+                    bottom: 30,
                 }}
             >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis domain={[-40, 40]} />
-                <Tooltip />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" className="text-muted" />
+                <XAxis dataKey="time" className="text-muted-foreground" />
+                <YAxis domain={[-40, 40]} className="text-muted-foreground" />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }} />
+                <Legend className="text-card-foreground" />
                 <Line
                     type="monotone"
                     dataKey="pitch"
-                    stroke="#ff4d4d"
+                    stroke="#ff4d4d" 
                     dot={false}
                     isAnimationActive={false}
                 />

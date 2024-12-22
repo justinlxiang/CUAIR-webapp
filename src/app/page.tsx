@@ -8,15 +8,15 @@ export default function Home() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-black p-6">
+      <main className="min-h-screen bg-background p-6">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-4">Welcome to CUAir's IntSys Ground Station</h1>
-          <p className="text-gray-300 text-xl">Select a system to monitor and control</p>
+          <h1 className="text-4xl font-bold text-foreground mb-4">Welcome to CUAir&apos;s IntSys Ground Station</h1>
+          <p className="text-muted-foreground text-xl">Select a system to monitor and control</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           <Link href="/obstacle-avoidance" className="transform hover:scale-105 transition-transform">
-            <div className="bg-[#1a1a1a] rounded-lg shadow-lg p-6 border border-gray-800">
+            <div className="bg-card rounded-lg shadow-lg p-6 border border-border">
               <div className="relative h-48 mb-4">
                 <Image
                   src="/images/obstacle-avoidance.jpg"
@@ -25,13 +25,13 @@ export default function Home() {
                   className="rounded-lg object-cover"
                 />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Obstacle Avoidance</h2>
-              <p className="text-gray-400">Monitor and control obstacle detection systems</p>
+              <h2 className="text-2xl font-bold text-card-foreground mb-2">Obstacle Avoidance</h2>
+              <p className="text-muted-foreground">Monitor and control obstacle detection systems</p>
             </div>
           </Link>
 
           <Link href="/warning-system" className="transform hover:scale-105 transition-transform">
-            <div className="bg-[#1a1a1a] rounded-lg shadow-lg p-6 border border-gray-800">
+            <div className="bg-card rounded-lg shadow-lg p-6 border border-border">
               <div className="relative h-48 mb-4">
                 <Image
                   src="/images/warning-system.jpg"
@@ -40,13 +40,13 @@ export default function Home() {
                   className="rounded-lg object-cover"
                 />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Warning System</h2>
-              <p className="text-gray-400">View real-time alerts and system warnings</p>
+              <h2 className="text-2xl font-bold text-card-foreground mb-2">Warning System</h2>
+              <p className="text-muted-foreground">View real-time alerts and system warnings</p>
             </div>
           </Link>
 
           <Link href="/system" className="transform hover:scale-105 transition-transform">
-            <div className="bg-[#1a1a1a] rounded-lg shadow-lg p-6 border border-gray-800">
+            <div className="bg-card rounded-lg shadow-lg p-6 border border-border">
               <div className="relative h-48 mb-4">
                 <Image
                   src="/images/system-status.jpg"
@@ -55,8 +55,8 @@ export default function Home() {
                   className="rounded-lg object-cover"
                 />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">System Status</h2>
-              <p className="text-gray-400">Check system health and performance metrics</p>
+              <h2 className="text-2xl font-bold text-card-foreground mb-2">System Status</h2>
+              <p className="text-muted-foreground">Check system health and performance metrics</p>
             </div>
           </Link>
         </div>

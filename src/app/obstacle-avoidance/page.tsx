@@ -29,7 +29,7 @@ export default function Home() {
   useEffect(() => {
     wsClient.connect();
 
-    const handleLidarData = (data: any) => {
+    const handleLidarData = (data: { type: string; data: LidarData }) => {
       if (data.type === 'lidar') {
         setLidarData(data.data);
       }
@@ -45,11 +45,11 @@ export default function Home() {
   return (
     <>
       <Header />
-      <main className={styles.container}>
+      <main className={`bg-background ${styles.container}`}>
         <div className={styles.wrapper}>
-          <h1 className={styles.title}>CUAIR Obstacle Avoidance</h1>
+          <h1 className={`text-foreground text-center ${styles.title}`}>CUAIR Obstacle Avoidance</h1>
           <div className="flex flex-row gap-4" style={{ minHeight: '700px' }}>
-            <Card className={styles.card} style={{ width: '700px' }}>
+            <Card className={`bg-card border-border ${styles.card}`} style={{ width: '700px' }}>
               <div className={styles.cardContent}>
                 <div className={styles.plotContainer}>
                   <LidarPlot />
@@ -57,8 +57,8 @@ export default function Home() {
               </div>
             </Card>
 
-            <Card className={`${styles.card} p-4`} style={{ width: '500px' }}>
-              <h2 className="text-xl font-bold text-white mb-4">Detected Obstacles</h2>
+            <Card className={`bg-card border-border p-4 ${styles.card}`} style={{ width: '500px' }}>
+              <h2 className="text-xl font-bold text-card-foreground mb-4">Detected Obstacles</h2>
               <div className="flex flex-col gap-3">
                 {lidarData?.clusters.map((cluster, idx) => (
                   <div 
