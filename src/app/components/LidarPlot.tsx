@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import React, { useEffect, useState } from 'react';
-import { fetchLidarData } from '../api/api';
+import { wsClient } from '../api/websocket';
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Text } from 'recharts';
 import styles from '../styles/LidarPlot.module.css';
 
@@ -11,19 +11,23 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
   const [points, setPoints] = useState<{x: number, y: number, angle: number, distance: number}[]>([]);
 
   useEffect(() => {
-    const updateLidarData = async () => {
-      try {
-        const data = await fetchLidarData();
-        // Extract points array from the response
-        setPoints(data.points || []);
-      } catch (error) {
-        console.error('Error updating lidar data:', error);
+    console.log('LidarPlot: Connecting to WebSocket');
+    wsClient.connect();
+
+    const handleLidarData = (data: any) => {
+      console.log('LidarPlot: Received websocket message:', data);
+      if (data.type === 'lidar') {
+        console.log('LidarPlot: Setting points:', data.data);
+        setPoints(data.data);
       }
     };
+    
+    wsClient.subscribe('lidar', handleLidarData);
+    console.log('LidarPlot: Subscribed to lidar topic');
 
-    updateLidarData(); // Initial fetch
-    const interval = setInterval(updateLidarData, 1000);
-    return () => clearInterval(interval);
+    return () => {
+      wsClient.unsubscribe('lidar', handleLidarData);
+    };
   }, []);
 
   return (

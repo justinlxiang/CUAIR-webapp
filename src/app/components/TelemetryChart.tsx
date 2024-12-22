@@ -3,47 +3,36 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { fetchOrientationData } from '../api/api';
+import { wsClient } from '../api/websocket';
 
 const MAX_DATA_POINTS = 50;
 
-// Wrap the component with dynamic import and ssr: false
 const TelemetryChart = dynamic(() => Promise.resolve(function Chart() {
-    const [data, setData] = useState<Array<{
-        time: string;
+    const [telemetryData, setTelemetryData] = useState<{
+        timestamp: number;
         pitch: number;
         roll: number;
         yaw: number;
-    }>>([]);
+    }[] | null>(null);
 
     useEffect(() => {
-        const interval = setInterval(async () => {
-            try {
-                const newOrientation = await fetchOrientationData();
-                
-                setData(prevData => {
-                    const newPoint = {
-                        time: new Date().toLocaleTimeString(),
-                        pitch: newOrientation.pitch,
-                        roll: newOrientation.roll,
-                        yaw: newOrientation.yaw
-                    };
+        wsClient.connect();
 
-                    const newData = [...prevData, newPoint];
-                    
-                    // Keep only the last MAX_DATA_POINTS points
-                    if (newData.length > MAX_DATA_POINTS) {
-                        newData.shift();
-                    }
-
-                    return newData;
+        const handleTelemetryData = (data: any) => {
+            if (data.type === 'telemetry') {
+                // Keep only the last MAX_DATA_POINTS
+                setTelemetryData((prevData) => {
+                    const newData = [...(prevData || []), data.data];
+                    return newData.slice(-MAX_DATA_POINTS);
                 });
-            } catch (error) {
-                console.error('Error fetching orientation data:', error);
             }
-        }, 100); // Update every 100ms
+        };
+        
+        wsClient.subscribe('telemetry', handleTelemetryData);
 
-        return () => clearInterval(interval);
+        return () => {
+            wsClient.unsubscribe('telemetry', handleTelemetryData);
+        };
     }, []);
 
     return (
@@ -51,7 +40,7 @@ const TelemetryChart = dynamic(() => Promise.resolve(function Chart() {
             <LineChart
                 width={800}
                 height={400}
-                data={data}
+                data={telemetryData || []}
                 margin={{
                     top: 20,
                     right: 30,

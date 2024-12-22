@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 from typing import List, Dict
 import time
-import psutil
+import asyncio
+from fastapi.websockets import WebSocketDisconnect
 
 app = FastAPI()
 
@@ -16,13 +17,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Move lidar simulation logic here
+# Store active connections
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def send_message(self, websocket: WebSocket, message: dict):
+        try:
+            await websocket.send_json(message)
+            return True
+        except Exception:
+            return False
+
+manager = ConnectionManager()
+
+# Keep existing data generation functions
 def generate_lidar_points(num_points: int = 360) -> List[Dict[str, float]]:
     angles = np.linspace(0, 2 * np.pi, num_points)
     points = []
     
     for angle in angles:
-        # Simulate distance between 0.5 and 5 meters
         distance = np.random.uniform(0.5, 5)
         x = distance * np.cos(angle)
         y = distance * np.sin(angle)
@@ -36,17 +58,8 @@ def generate_lidar_points(num_points: int = 360) -> List[Dict[str, float]]:
     
     return points
 
-@app.get("/api/lidar-data")
-async def get_lidar_data():
-    points = generate_lidar_points()
-    return {"points": points} 
-
-@app.get("/api/orientation-data")
-async def get_orientation_data():
-    # Simulate continuous but somewhat random changes in orientation
+def generate_telemetry_data():
     timestamp = time.time()
-    
-    # Generate somewhat continuous values using sin waves with some noise
     pitch = 20 * np.sin(timestamp / 2) + np.random.normal(0, 2)
     roll = 15 * np.sin(timestamp / 3 + 1) + np.random.normal(0, 2)
     yaw = 30 * np.sin(timestamp / 4 + 2) + np.random.normal(0, 2)
@@ -57,3 +70,39 @@ async def get_orientation_data():
         "roll": float(roll),
         "yaw": float(yaw)
     }
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            try:
+                # Send both lidar and telemetry data
+                lidar_data = {"type": "lidar", "data": generate_lidar_points()}
+                telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
+                
+                # Send messages to all active connections
+                failed_connections = []
+                for connection in manager.active_connections[:]:  # Create a copy of the list
+                    try:
+                        success = await manager.send_message(connection, lidar_data)
+                        if success:
+                            await manager.send_message(connection, telemetry_data)
+                        else:
+                            failed_connections.append(connection)
+                    except WebSocketDisconnect:
+                        failed_connections.append(connection)
+                    except asyncio.exceptions.CancelledError:
+                        break
+                
+                # Clean up failed connections
+                for connection in failed_connections:
+                    manager.disconnect(connection)
+                
+                await asyncio.sleep(0.1)
+            
+            except asyncio.exceptions.CancelledError:
+                break  # Break the loop instead of raising
+            
+    finally:  # Use finally to ensure cleanup always happens
+        manager.disconnect(websocket)

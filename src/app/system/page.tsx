@@ -36,7 +36,7 @@ export default function System() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-black flex flex-col items-center justify-center p-6">
+      <main className="min-h-screen bg-black flex flex-col items-center p-6">
         <h1 className="text-3xl font-bold mb-6 text-white">System Monitoring</h1>
         
         <Card className="w-full max-w-md bg-[#1a1a1a] border-gray-800">
