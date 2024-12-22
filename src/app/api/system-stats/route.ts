@@ -6,13 +6,16 @@ export async function GET() {
   const freeMem = os.freemem();
   const usedMem = totalMem - freeMem;
 
-  // Calculate CPU usage
+  // Get individual CPU core usage
   const cpus = os.cpus();
-  const cpuUsage = cpus.reduce((acc, cpu) => {
+  const cpuCores = cpus.map(cpu => {
     const total = Object.values(cpu.times).reduce((a, b) => a + b);
     const idle = cpu.times.idle;
-    return acc + ((total - idle) / total) * 100;
-  }, 0) / cpus.length;
+    return ((total - idle) / total) * 100;
+  });
+
+  // Calculate average CPU usage
+  const cpuUsage = cpuCores.reduce((acc, usage) => acc + usage, 0) / cpus.length;
 
   return NextResponse.json({
     memory: {
@@ -21,5 +24,9 @@ export async function GET() {
       free: freeMem,
     },
     cpu: cpuUsage,
+    cpuCores: cpuCores,
+    hostname: os.hostname(),
+    platform: os.platform(),
+    architecture: os.arch(),
   });
 } 

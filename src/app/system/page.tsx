@@ -11,6 +11,10 @@ interface SystemStats {
     free: number;
   };
   cpu: number;
+  cpuCores: number[];
+  hostname: string;
+  platform: string;
+  architecture: string;
 }
 
 export default function System() {
@@ -47,6 +51,18 @@ export default function System() {
             {stats ? (
               <>
                 <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-white">System Information</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-400">
+                    <span>Hostname:</span>
+                    <span>{stats.hostname}</span>
+                    <span>Platform:</span>
+                    <span>{stats.platform}</span>
+                    <span>Architecture:</span>
+                    <span>{stats.architecture}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-white">Memory Usage</h3>
                   <div className="flex justify-between text-sm text-gray-400">
                     <span>Used</span>
@@ -63,13 +79,29 @@ export default function System() {
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-white">CPU Usage</h3>
                   <div className="flex justify-between text-sm text-gray-400">
-                    <span>Total CPU</span>
+                    <span>Average CPU</span>
                     <span>{stats.cpu.toFixed(1)}%</span>
                   </div>
                   <Progress 
                     value={stats.cpu} 
                     className="h-2 bg-black [&>div]:bg-gray-400"
                   />
+                  
+                  <div className="mt-2">
+                    <h4 className="text-sm font-semibold text-white mb-2">CPU Cores</h4>
+                    {stats.cpuCores.map((usage, index) => (
+                      <div key={index} className="mb-2">
+                        <div className="flex justify-between text-sm text-gray-400">
+                          <span>Core {index}</span>
+                          <span>{usage.toFixed(1)}%</span>
+                        </div>
+                        <Progress 
+                          value={usage} 
+                          className="h-2 bg-black [&>div]:bg-gray-400"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </>
             ) : (
