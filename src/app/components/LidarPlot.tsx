@@ -15,9 +15,8 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
     wsClient.connect();
 
     const handleLidarData = (data: any) => {
-      console.log('LidarPlot: Received websocket message:', data);
       if (data.type === 'lidar') {
-        console.log('LidarPlot: Setting points:', data.data);
+        // console.log('LidarPlot: Received websocket message:', data.data);
         setPoints(data.data);
       }
     };

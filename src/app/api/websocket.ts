@@ -29,12 +29,10 @@ export class WebSocketClient {
 
             this.ws.onmessage = (event) => {
                 try {
-                    console.log('WebSocket: Raw message received:', event.data);
                     const message = JSON.parse(event.data);
-                    console.log('WebSocket: Parsed message:', message);
+                    // console.log('WebSocket: Parsed message:', message);
                     
                     const handlers = this.handlers.get(message.type) || [];
-                    console.log(`WebSocket: Found ${handlers.length} handlers for type ${message.type}`);
                     
                     handlers.forEach(handler => handler(message));
                 } catch (error) {

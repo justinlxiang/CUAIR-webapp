@@ -45,7 +45,7 @@ export default function Home() {
             </div>
           </Link>
 
-          <Link href="/system-status" className="transform hover:scale-105 transition-transform">
+          <Link href="/system" className="transform hover:scale-105 transition-transform">
             <div className="bg-[#1a1a1a] rounded-lg shadow-lg p-6 border border-gray-800">
               <div className="relative h-48 mb-4">
                 <Image

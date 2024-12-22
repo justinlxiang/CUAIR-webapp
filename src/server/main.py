@@ -81,28 +81,28 @@ async def websocket_endpoint(websocket: WebSocket):
                 lidar_data = {"type": "lidar", "data": generate_lidar_points()}
                 telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
                 
-                # Send messages to all active connections
-                failed_connections = []
-                for connection in manager.active_connections[:]:  # Create a copy of the list
-                    try:
-                        success = await manager.send_message(connection, lidar_data)
-                        if success:
-                            await manager.send_message(connection, telemetry_data)
-                        else:
-                            failed_connections.append(connection)
-                    except WebSocketDisconnect:
-                        failed_connections.append(connection)
-                    except asyncio.exceptions.CancelledError:
-                        break
-                
-                # Clean up failed connections
-                for connection in failed_connections:
-                    manager.disconnect(connection)
+                # Send messages only to the current websocket connection
+                success = await manager.send_message(websocket, lidar_data)
+                if success:
+                    await manager.send_message(websocket, telemetry_data)
+                else:
+                    # If sending fails, close the connection
+                    await websocket.close()
+                    break
                 
                 await asyncio.sleep(0.1)
             
-            except asyncio.exceptions.CancelledError:
-                break  # Break the loop instead of raising
+            except WebSocketDisconnect:
+                # Handle normal disconnection
+                manager.disconnect(websocket)
+                break
+            except asyncio.CancelledError:
+                # Handle cancellation (e.g., during server shutdown)
+                manager.disconnect(websocket)
+                await websocket.close()
+                break
             
-    finally:  # Use finally to ensure cleanup always happens
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+    finally:
         manager.disconnect(websocket)
