@@ -18,7 +18,7 @@ const TelemetryChart = dynamic(() => Promise.resolve(function Chart() {
     useEffect(() => {
         wsClient.connect();
 
-        const handleTelemetryData = (data: any) => {
+        const handleTelemetryData = (data: { type: string; data: { timestamp: number; pitch: number; roll: number; yaw: number; } }) => {
             if (data.type === 'telemetry') {
                 // Keep only the last MAX_DATA_POINTS
                 setTelemetryData((prevData) => {

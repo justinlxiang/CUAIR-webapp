@@ -33,7 +33,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
     console.log('LidarPlot: Connecting to WebSocket');
     wsClient.connect();
 
-    const handleLidarData = (data: any) => {
+    const handleLidarData = (data: { type: string; data: LidarData }) => {
       if (data.type === 'lidar') {
         setLidarData(data.data);
       }
