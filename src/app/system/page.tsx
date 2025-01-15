@@ -1,41 +1,12 @@
-'use client';
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import Header from '../components/Header';
+import { GET } from '@/lib/system-stats/route';
 
-interface SystemStats {
-  memory: {
-    total: number;
-    used: number;
-    free: number;
-  };
-  cpu: number;
-  cpuCores: number[];
-  hostname: string;
-  platform: string;
-  architecture: string;
-}
-
-export default function System() {
-  const [stats, setStats] = React.useState<SystemStats | null>(null);
-
-  React.useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/system-stats');
-        const data = await response.json();
-        setStats(data);
-      } catch (error) {
-        console.error('Failed to fetch system stats:', error);
-      }
-    };
-
-    fetchStats();
-    const interval = setInterval(fetchStats, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+export default async function System() {
+  const response = await GET();
+  const stats = await response.json();
 
   return (
     <>
@@ -89,7 +60,7 @@ export default function System() {
                   
                   <div className="mt-2">
                     <h4 className="text-sm font-semibold text-card-foreground mb-2">CPU Cores</h4>
-                    {stats.cpuCores.map((usage, index) => (
+                    {stats.cpuCores.map((usage: number, index: number) => (
                       <div key={index} className="mb-2">
                         <div className="flex justify-between text-sm text-muted-foreground">
                           <span>Core {index}</span>
