@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import LidarPlot from '../components/LidarPlot';
 import { Card } from "@/components/ui/card";
 import Header from '../components/Header';
@@ -25,20 +25,38 @@ interface LidarData {
 
 export default function Home() {
   const [lidarData, setLidarData] = useState<LidarData | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     wsClient.connect();
+    
+    wsClient.onMessage((message) => {
+        if (message.type === 'lidar') {
+            setLidarData(message.data);
+        }
+    });
 
-    const handleLidarData = (data: { type: string; data: LidarData }) => {
-      if (data.type === 'lidar') {
-        setLidarData(data.data);
-      }
-    };
-    
-    wsClient.subscribe('lidar', handleLidarData);
-    
+    const currentVideo = videoRef.current;
+
+    // Start webcam
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          if (currentVideo) {
+            currentVideo.srcObject = stream;
+          }
+        })
+        .catch((err) => {
+          console.error("Error accessing webcam:", err);
+        });
+    }
+
     return () => {
-      wsClient.unsubscribe('lidar', handleLidarData);
+      if (currentVideo?.srcObject) {
+        const stream = currentVideo.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
     };
   }, []);
 
@@ -52,7 +70,7 @@ export default function Home() {
             <Card className={`bg-card border-border ${styles.card}`} style={{ width: '700px' }}>
               <div className={styles.cardContent}>
                 <div className={styles.plotContainer}>
-                  <LidarPlot />
+                  <LidarPlot data={lidarData} />
                 </div>
               </div>
             </Card>
@@ -81,6 +99,21 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </Card>
+          </div>
+          
+          <div className="mt-8">
+            <Card className={`bg-card border-border p-4 ${styles.card}`}>
+              <h2 className="text-xl font-bold text-card-foreground mb-4">Live Video Feed</h2>
+              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
               </div>
             </Card>
           </div>

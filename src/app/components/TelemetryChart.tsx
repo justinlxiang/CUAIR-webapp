@@ -18,21 +18,14 @@ const TelemetryChart = dynamic(() => Promise.resolve(function Chart() {
     useEffect(() => {
         wsClient.connect();
 
-        const handleTelemetryData = (data: { type: string; data: { timestamp: number; pitch: number; roll: number; yaw: number; } }) => {
-            if (data.type === 'telemetry') {
-                // Keep only the last MAX_DATA_POINTS
+        wsClient.onMessage((message) => {
+            if (message.type === 'telemetry') {
                 setTelemetryData((prevData) => {
-                    const newData = [...(prevData || []), data.data];
+                    const newData = [...(prevData || []), message.data];
                     return newData.slice(-MAX_DATA_POINTS);
                 });
             }
-        };
-        
-        wsClient.subscribe('telemetry', handleTelemetryData);
-
-        return () => {
-            wsClient.unsubscribe('telemetry', handleTelemetryData);
-        };
+        });
     }, []);
 
     return (

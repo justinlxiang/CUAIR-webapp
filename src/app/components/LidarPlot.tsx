@@ -1,8 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import React, { useEffect, useState } from 'react';
-import { wsClient } from '../api/websocket';
+import React from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ReferenceArea } from 'recharts';
 import styles from '../styles/LidarPlot.module.css';
 
@@ -26,31 +25,12 @@ interface LidarData {
   radius_threshold: number;
 }
 
-const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
-  const [lidarData, setLidarData] = useState<LidarData | null>(null);
-
-  useEffect(() => {
-    console.log('LidarPlot: Connecting to WebSocket');
-    wsClient.connect();
-
-    const handleLidarData = (data: { type: string; data: LidarData }) => {
-      if (data.type === 'lidar') {
-        setLidarData(data.data);
-      }
-    };
-    
-    wsClient.subscribe('lidar', handleLidarData);
-    
-    return () => {
-      wsClient.unsubscribe('lidar', handleLidarData);
-    };
-  }, []);
+const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: LidarData | null }) {
+  if (!data) return <div>Loading...</div>;
 
   const formatPoints = (points: number[][]): Point[] => {
     return points.map(([x, y]) => ({ x, y }));
   };
-
-  if (!lidarData) return <div>Loading...</div>;
 
   return (
     <div className={styles.plotContainer}>
@@ -83,7 +63,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
         />
         {/* Plot all points */}
         <Scatter 
-          data={formatPoints(lidarData.points)} 
+          data={formatPoints(data.points)} 
           fill="#00FFFF"
           opacity={0.6}
           isAnimationActive={false}
@@ -91,7 +71,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
         
 
         {/* Plot clusters - simplified version */}
-        {lidarData.clusters.map((cluster, idx) => (
+        {data.clusters.map((cluster, idx) => (
           <Scatter
             key={idx}
             data={formatPoints(cluster.points)}
@@ -102,7 +82,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot() {
         ))}
 
         {/* Plot bounding boxes separately */}
-        {lidarData.clusters.map((cluster, idx) => (
+        {data.clusters.map((cluster, idx) => (
           <ReferenceArea
             key={idx}
             x1={cluster.center[0] - cluster.width/2}

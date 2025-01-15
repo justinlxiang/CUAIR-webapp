@@ -1,77 +1,65 @@
-type MessageHandler = (data: any) => void;
+type WebSocketMessage = {
+    type: 'lidar';
+    data: {
+        points: number[][];
+        clusters: {
+            center: [number, number];
+            width: number;
+            height: number;
+            points: number[][];
+            id?: number;
+            movement?: number;
+            moving_towards_lidar?: boolean;
+        }[];
+        radius_threshold: number;
+    };
+} | {
+    type: 'telemetry';
+    data: {
+        timestamp: number;
+        pitch: number;
+        roll: number;
+        yaw: number;
+    };
+} | {
+    type: 'video';
+    data: string;
+};
 
 export class WebSocketClient {
     private ws: WebSocket | null = null;
-    private handlers: Map<string, MessageHandler[]> = new Map();
-    private isConnecting: boolean = false;
+    private messageHandler: ((message: WebSocketMessage) => void) | null = null;
 
     connect() {
         if (this.ws?.readyState === WebSocket.OPEN) {
-            console.log('WebSocket: Already connected');
             return;
         }
 
-        if (this.isConnecting) {
-            console.log('WebSocket: Connection already in progress');
-            return;
-        }
+        this.ws = new WebSocket('ws://localhost:8000/ws');
 
-        console.log('WebSocket: Attempting to connect...');
-        this.isConnecting = true;
+        this.ws.onopen = () => {
+            console.log('WebSocket connected');
+        };
 
-        try {
-            this.ws = new WebSocket('ws://localhost:8000/ws');
+        this.ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                this.messageHandler?.(message);
+            } catch (error) {
+                console.error('WebSocket: Error processing message:', error);
+            }
+        };
 
-            this.ws.onopen = () => {
-                console.log('WebSocket: Connection established');
-                this.isConnecting = false;
-            };
-
-            this.ws.onmessage = (event) => {
-                try {
-                    const message = JSON.parse(event.data);
-                    // console.log('WebSocket: Parsed message:', message);
-                    
-                    const handlers = this.handlers.get(message.type) || [];
-                    
-                    handlers.forEach(handler => handler(message));
-                } catch (error) {
-                    console.error('WebSocket: Error processing message:', error);
-                }
-            };
-
-            this.ws.onclose = (event) => {
-                console.log('WebSocket: Connection closed', event.reason);
-                this.isConnecting = false;
-                // Attempt to reconnect after a delay
-                setTimeout(() => this.connect(), 1000);
-            };
-
-            this.ws.onerror = (error) => {
-                console.error('WebSocket: Error occurred:', error);
-                this.isConnecting = false;
-            };
-
-        } catch (error) {
-            console.error('WebSocket: Connection error:', error);
-            this.isConnecting = false;
-        }
+        this.ws.onclose = () => {
+            // Attempt to reconnect after a delay
+            setTimeout(() => this.connect(), 1000);
+        };
     }
 
-    subscribe(type: string, handler: MessageHandler) {
-        if (!this.handlers.has(type)) {
-            this.handlers.set(type, []);
-        }
-        this.handlers.get(type)?.push(handler);
-    }
-
-    unsubscribe(type: string, handler: MessageHandler) {
-        const handlers = this.handlers.get(type);
-        if (handlers) {
-            this.handlers.set(type, handlers.filter(h => h !== handler));
-        }
+    onMessage(handler: (message: WebSocketMessage) => void) {
+        this.messageHandler = handler;
     }
 }
 
-// Create a singleton instance
+// Single instance for the application
 export const wsClient = new WebSocketClient(); 
