@@ -18,28 +18,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Store active connections
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-
-    async def send_message(self, websocket: WebSocket, message: dict):
-        try:
-            await websocket.send_json(message)
-            return True
-        except Exception:
-            return False
-
-manager = ConnectionManager()
-
 # Keep existing data generation functions
 def generate_lidar_points(num_points: int = 360) -> List[Dict[str, float]]:
     angles = np.linspace(0, 2 * np.pi, num_points)
@@ -74,7 +52,7 @@ def generate_telemetry_data():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+    await websocket.accept()
     detector = ObstacleDetector(simulation=True)
     
     try:
@@ -88,24 +66,22 @@ async def websocket_endpoint(websocket: WebSocket):
                 telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
                 
                 # Send both types of data
-                success = await manager.send_message(websocket, lidar_data)
-                if success:
-                    await manager.send_message(websocket, telemetry_data)
-                else:
+                try:
+                    await websocket.send_json(lidar_data)
+                    await websocket.send_json(telemetry_data)
+                except Exception:
                     await websocket.close()
                     break
                 
                 await asyncio.sleep(0.1)  # 10 FPS
             
             except WebSocketDisconnect:
-                manager.disconnect(websocket)
                 break
             except asyncio.CancelledError:
-                manager.disconnect(websocket)
                 await websocket.close()
                 break
             
     except Exception as e:
         print(f"WebSocket error: {e}")
     finally:
-        manager.disconnect(websocket)
+        await websocket.close()
