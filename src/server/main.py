@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 from typing import List, Dict
@@ -17,6 +17,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Store most recent LiDAR data in state object
+class LidarState:
+    def __init__(self):
+        self.scan_points = []
+        self.point_labels = []
+        self.bounding_boxes = []
+
+lidar_state = LidarState()
 
 # Keep existing data generation functions
 def generate_lidar_points(num_points: int = 360) -> List[Dict[str, float]]:
@@ -85,3 +94,25 @@ async def websocket_endpoint(websocket: WebSocket):
         print(f"WebSocket error: {e}")
     finally:
         await websocket.close()
+
+
+@app.post("/lidar-data")
+async def receive_lidar_data(data: dict):
+    try:
+        # Extract data from the request
+        timestamp = data.get("timestamp")
+        scan_points = data.get("scan_points", [])
+        point_labels = data.get("point_labels", [])
+        bounding_boxes = data.get("bounding_boxes", [])
+
+        # Store the latest data in state object
+        lidar_state.scan_points = scan_points
+        lidar_state.point_labels = point_labels
+        lidar_state.bounding_boxes = bounding_boxes
+
+        print("Received LiDAR data: {} points, {} clusters".format(len(lidar_state.scan_points), len(lidar_state.bounding_boxes)))
+
+        return {"status": "success"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
