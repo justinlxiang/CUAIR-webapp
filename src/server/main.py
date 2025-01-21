@@ -121,8 +121,7 @@ async def receive_lidar_data(data: dict):
         lidar_state.point_labels = point_labels
         lidar_state.bounding_boxes = bounding_boxes
 
-        # print("Received LiDAR data: {} points, {} clusters".format(len(lidar_state.scan_points), len(lidar_state.bounding_boxes)))
-        print(lidar_state.bounding_boxes)
+        print("Received LiDAR data: {} points, {} clusters".format(len(lidar_state.scan_points), len(lidar_state.bounding_boxes)))
 
         lidar_data = {
             "type": "lidar",
