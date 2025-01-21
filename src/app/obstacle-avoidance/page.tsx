@@ -112,6 +112,7 @@ export default function Home() {
                   autoPlay
                   playsInline
                   muted
+                  style={{ display: 'block' }}
                   className="w-full h-full object-cover"
                 />
               </div>

@@ -18,6 +18,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class WebSocketManager:
+    def __init__(self):
+        self.connection: WebSocket | None = None
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.connection = websocket
+
+    async def disconnect(self):
+        self.connection = None
+
+    async def send_message(self, message: dict):
+        if self.connection:
+            try:
+                await self.connection.send_json(message)
+            except Exception as e:
+                print(f"Error sending to websocket: {e}")
+                self.connection = None
+
+# Initialize the WebSocket manager
+ws_manager = WebSocketManager()
+
 # Store most recent LiDAR data in state object
 class LidarState:
     def __init__(self):
@@ -61,40 +83,29 @@ def generate_telemetry_data():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    detector = ObstacleDetector(simulation=True)
+    await ws_manager.connect(websocket)
     
     try:
         while True:
             try:
                 # Get obstacle detection data
-                obstacle_data = detector.process_frame()
-                lidar_data = {"type": "lidar", "data": obstacle_data}
+                # obstacle_data = detector.process_frame()
+                # lidar_data = {"type": "lidar", "data": obstacle_data}
                 
                 # Get telemetry data
                 telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
-                
-                # Send both types of data
-                try:
-                    await websocket.send_json(lidar_data)
-                    await websocket.send_json(telemetry_data)
-                except Exception:
-                    await websocket.close()
-                    break
-                
+                await websocket.send_json(telemetry_data)
                 await asyncio.sleep(0.1)  # 10 FPS
             
             except WebSocketDisconnect:
                 break
             except asyncio.CancelledError:
-                await websocket.close()
                 break
             
     except Exception as e:
         print(f"WebSocket error: {e}")
     finally:
-        await websocket.close()
-
+        await ws_manager.disconnect()
 
 @app.post("/lidar-data")
 async def receive_lidar_data(data: dict):
@@ -110,8 +121,19 @@ async def receive_lidar_data(data: dict):
         lidar_state.point_labels = point_labels
         lidar_state.bounding_boxes = bounding_boxes
 
-        print("Received LiDAR data: {} points, {} clusters".format(len(lidar_state.scan_points), len(lidar_state.bounding_boxes)))
+        # print("Received LiDAR data: {} points, {} clusters".format(len(lidar_state.scan_points), len(lidar_state.bounding_boxes)))
+        print(lidar_state.bounding_boxes)
 
+        lidar_data = {
+            "type": "lidar",
+            "data": {
+                "points": scan_points,
+                "clusters": bounding_boxes,
+                "radius_threshold": 0.5
+            }
+        }
+        
+        await ws_manager.send_message(lidar_data)
         return {"status": "success"}
 
     except Exception as e:
