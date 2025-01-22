@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import React from 'react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ReferenceArea } from 'recharts';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, ReferenceArea, ZAxis } from 'recharts';
 import styles from '../styles/LidarPlot.module.css';
 
 interface Point {
@@ -29,7 +29,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
   if (!data) return <div>Loading...</div>;
 
   const formatPoints = (points: number[][]): Point[] => {
-    return points.map(([x, y]) => ({ x, y }));
+    return points.map(([x, y]) => ({ x, y, z: 6 }));
   };
 
   return (
@@ -37,7 +37,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
       <h1 className="text-2xl font-bold text-white text-center">LIDAR Data</h1>
       <ScatterChart
         width={700}
-        height={700}
+        height={645}
         margin={{ top: 20, right: 50, bottom: 20, left: 20 }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#333333" />
@@ -48,7 +48,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           unit="m"
           stroke="#ff4d4d"
           label={{ value: 'X (meters)', position: 'bottom', fill: '#FFFFFF' }}
-          domain={[-20, 20]}
+          domain={[-12, 12]}
           allowDataOverflow={true} // Prevent domain from auto-adjusting
         />
         <YAxis 
@@ -58,9 +58,11 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           unit="m"
           stroke="#ff4d4d"
           label={{ value: 'Y (meters)', angle: -90, position: 'left', fill: '#FFFFFF' }}
-          domain={[-20, 20]}
+          domain={[-12, 12]}
           allowDataOverflow={true} // Prevent domain from auto-adjusting
         />
+        <ZAxis type="number" dataKey="z" range={[0, 100]} name="size"/>
+
         {/* Plot all points */}
         <Scatter 
           data={formatPoints(data.points)} 
@@ -95,6 +97,39 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
             fill="none"
           />
         ))}
+
+        {/* Plot radius circle */}
+        <ReferenceArea
+          x1={-data.radius_threshold}
+          x2={data.radius_threshold}
+          y1={-data.radius_threshold}
+          y2={data.radius_threshold}
+          stroke="#FFFFFF"
+          strokeWidth={1}
+          fill="none"
+          shape={(props) => {
+            const { x, y, width, height } = props;
+            return (
+              <circle 
+                cx={x + width/2} 
+                cy={y + height/2} 
+                r={width/2} 
+                stroke="#FFFFFF" 
+                strokeWidth={1} 
+                fill="none"
+              />
+            );
+          }}
+        />
+        {/* Plot origin point */}
+        <Scatter
+          data={[{ x: 0, y: 0, z: 3 }]}
+          fill="#FFFFFF"
+          stroke="#FFFFFF"
+          r={10}
+          isAnimationActive={false}
+          shape="triangle"
+        />
       </ScatterChart>
     </div>
   );

@@ -93,9 +93,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 # lidar_data = {"type": "lidar", "data": obstacle_data}
                 
                 # Get telemetry data
-                telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
-                await websocket.send_json(telemetry_data)
-                await asyncio.sleep(0.1)  # 10 FPS
+                # telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
+                # await websocket.send_json(telemetry_data)
+                # await asyncio.sleep(0.01)  # 10 FPS
+                await websocket.receive_text()
             
             except WebSocketDisconnect:
                 break
@@ -111,28 +112,31 @@ async def websocket_endpoint(websocket: WebSocket):
 async def receive_lidar_data(data: dict):
     try:
         # Extract data from the request
-        timestamp = data.get("timestamp")
         scan_points = data.get("scan_points", [])
-        point_labels = data.get("point_labels", [])
         bounding_boxes = data.get("bounding_boxes", [])
 
-        # Store the latest data in state object
-        lidar_state.scan_points = scan_points
-        lidar_state.point_labels = point_labels
-        lidar_state.bounding_boxes = bounding_boxes
-
-        print("Received LiDAR data: {} points, {} clusters".format(len(lidar_state.scan_points), len(lidar_state.bounding_boxes)))
-
+        # Send the data immediately through WebSocket without any processing
         lidar_data = {
             "type": "lidar",
             "data": {
                 "points": scan_points,
                 "clusters": bounding_boxes,
-                "radius_threshold": 0.5
+                "radius_threshold": 12
             }
         }
         
+        # Send WebSocket message first
         await ws_manager.send_message(lidar_data)
+        
+        # Update state after sending (non-blocking)
+        lidar_state.scan_points = scan_points
+        lidar_state.point_labels = data.get("point_labels", [])
+        lidar_state.bounding_boxes = bounding_boxes
+
+        # Optional: Move logging to after sending data
+        print("Received LiDAR data: {} points, {} clusters".format(
+            len(scan_points), len(bounding_boxes)))
+
         return {"status": "success"}
 
     except Exception as e:
