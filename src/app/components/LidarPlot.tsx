@@ -32,6 +32,12 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
     return points.map(([x, y]) => ({ x, y, z: 6 }));
   };
 
+  // Get color based on cluster ID or fallback to index-based color
+  const getClusterColor = (cluster: Cluster, idx: number) => {
+    const colorId = cluster.id ?? idx;
+    return `hsl(${(colorId * 137) % 360}, 70%, 50%)`;
+  };
+
   return (
     <div className={styles.plotContainer}>
       <h1 className="text-2xl font-bold text-white text-center">LIDAR Data</h1>
@@ -71,13 +77,12 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           isAnimationActive={false}
         />
         
-
         {/* Plot clusters - simplified version */}
         {data.clusters.map((cluster, idx) => (
           <Scatter
             key={idx}
             data={formatPoints(cluster.points)}
-            fill={`hsl(${(idx * 137) % 360}, 70%, 50%)`}
+            fill={getClusterColor(cluster, idx)}
             opacity={0.8}
             isAnimationActive={false}
           />
@@ -91,7 +96,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
             x2={cluster.center[0] + cluster.width/2}
             y1={cluster.center[1] - cluster.height/2}
             y2={cluster.center[1] + cluster.height/2}
-            stroke={`hsl(${(idx * 137) % 360}, 70%, 50%)`}
+            stroke={getClusterColor(cluster, idx)}
             strokeWidth={2}
             strokeDasharray="5 5"
             fill="none"

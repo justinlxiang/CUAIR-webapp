@@ -23,6 +23,11 @@ interface LidarData {
   radius_threshold: number;
 }
 
+const getClusterColor = (cluster: Cluster, idx: number) => {
+  const colorId = cluster.id ?? idx;
+  return `hsl(${(colorId * 137) % 360}, 70%, 50%)`;
+};
+
 export default function Home() {
   const [lidarData, setLidarData] = useState<LidarData | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -83,8 +88,8 @@ export default function Home() {
                     key={idx}
                     className="px-4 py-3 rounded-lg border flex justify-between items-center"
                     style={{
-                      borderColor: `hsl(${(idx * 137) % 360}, 70%, 50%)`,
-                      color: `hsl(${(idx * 137) % 360}, 70%, 50%)`
+                      borderColor: getClusterColor(cluster, idx),
+                      color: getClusterColor(cluster, idx)
                     }}
                   >
                     <div>
