@@ -26,17 +26,22 @@ interface LidarData {
 }
 
 const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: LidarData | null }) {
-  if (!data) return <div>Loading...</div>;
+  // Add debug logging
+  React.useEffect(() => {
+    console.log('Plot update:', new Date().toISOString());
+  }, [data]);
 
-  const formatPoints = (points: number[][]): Point[] => {
+  // Move hooks before any conditional returns
+  const formatPoints = React.useCallback((points: number[][]): Point[] => {
     return points.map(([x, y]) => ({ x, y, z: 6 }));
-  };
+  }, []);
 
-  // Get color based on cluster ID or fallback to index-based color
-  const getClusterColor = (cluster: Cluster, idx: number) => {
+  const getClusterColor = React.useCallback((cluster: Cluster, idx: number) => {
     const colorId = cluster.id ?? idx;
     return `hsl(${(colorId * 137) % 360}, 70%, 50%)`;
-  };
+  }, []);
+
+  if (!data) return <div>Loading...</div>;
 
   return (
     <div className={styles.plotContainer}>
@@ -138,6 +143,9 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
       </ScatterChart>
     </div>
   );
-}), { ssr: false });
+}), { 
+  ssr: false,
+  loading: () => <div>Loading plot...</div>
+});
 
 export default LidarPlot;
