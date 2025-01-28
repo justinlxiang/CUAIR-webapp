@@ -41,7 +41,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
     return `hsl(${(colorId * 137) % 360}, 70%, 50%)`;
   }, []);
 
-  if (!data) return <div>Loading...</div>;
+  if (!data) return <div>No incoming data...</div>;
 
   return (
     <div className={styles.plotContainer}>
