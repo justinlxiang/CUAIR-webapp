@@ -12,7 +12,7 @@ app = FastAPI()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],  # In development, allow all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -111,6 +111,10 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.post("/lidar-data")
 async def receive_lidar_data(data: dict):
     try:
+        # Add debug logging at the start of the function
+        print("Received POST request to /lidar-data")
+        print("Request data:", data)
+        
         # Extract data from the request
         scan_points = data.get("scan_points", [])
         bounding_boxes = data.get("bounding_boxes", [])
@@ -121,7 +125,7 @@ async def receive_lidar_data(data: dict):
             "data": {
                 "points": scan_points,
                 "clusters": bounding_boxes,
-                "radius_threshold": 12
+                "radius_threshold": 14
             }
         }
         

@@ -35,7 +35,7 @@ export class WebSocketClient {
             return;
         }
 
-        this.ws = new WebSocket('ws://localhost:8000/ws');
+        this.ws = new WebSocket('ws://localhost:8888/ws');
 
         this.ws.onopen = () => {
             console.log('WebSocket connected');

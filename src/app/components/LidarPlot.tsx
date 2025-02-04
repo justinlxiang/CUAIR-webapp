@@ -59,8 +59,10 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           unit="m"
           stroke="#ff4d4d"
           label={{ value: 'X (meters)', position: 'bottom', fill: '#FFFFFF' }}
-          domain={[-12, 12]}
+          domain={[-15, 15]}
           allowDataOverflow={true} // Prevent domain from auto-adjusting
+          interval={0} // Show all ticks
+          tickCount={7} // Will create ~6 evenly spaced intervals
         />
         <YAxis 
           type="number" 
@@ -69,8 +71,10 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           unit="m"
           stroke="#ff4d4d"
           label={{ value: 'Y (meters)', angle: -90, position: 'left', fill: '#FFFFFF' }}
-          domain={[-12, 12]}
+          domain={[-15, 15]}
           allowDataOverflow={true} // Prevent domain from auto-adjusting
+          interval={0} // Show all ticks
+          tickCount={7} // Will create ~6 evenly spaced intervals
         />
         <ZAxis type="number" dataKey="z" range={[0, 100]} name="size"/>
 
