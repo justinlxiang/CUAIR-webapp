@@ -140,8 +140,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 # telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
                 # await websocket.send_json(telemetry_data)
                 
-                await asyncio.sleep(0.033)  # ~30 FPS
-                await websocket.receive_text()
+                await asyncio.sleep(0.033)  # ~30 FPS                
             
             except WebSocketDisconnect:
                 break
