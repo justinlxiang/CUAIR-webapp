@@ -4,8 +4,12 @@ import numpy as np
 from typing import List, Dict
 import time
 import asyncio
+import cv2
+import base64
 from fastapi.websockets import WebSocketDisconnect
 from obstacle_detection import ObstacleDetector
+from aiortc import VideoStreamTrack, RTCPeerConnection, RTCSessionDescription
+from webrtc_manager import WebRTCManager
 
 app = FastAPI()
 
@@ -81,6 +85,32 @@ def generate_telemetry_data():
         "yaw": float(yaw)
     }
 
+# Add this new class after LidarState
+class RTSPCamera:
+    def __init__(self, rtsp_url):
+        self.rtsp_url = rtsp_url
+        self.cap = None
+        
+    def connect(self):
+        self.cap = cv2.VideoCapture(self.rtsp_url)
+        if not self.cap.isOpened():
+            raise Exception("Failed to connect to RTSP stream")
+            
+    def read_frame(self):
+        if self.cap is None:
+            self.connect()
+        ret, frame = self.cap.read()
+        if not ret:
+            return None
+        return frame
+        
+    def release(self):
+        if self.cap:
+            self.cap.release()
+
+# Initialize RTSP camera with your stream URL
+rtsp_camera = RTSPCamera("rtsp://localhost:8554/mystream")
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)
@@ -88,14 +118,29 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             try:
-                # Get obstacle detection data
-                # obstacle_data = detector.process_frame()
-                # lidar_data = {"type": "lidar", "data": obstacle_data}
+                # Get frame from RTSP stream
+                frame = rtsp_camera.read_frame()
+                if frame is not None:
+                    # Encode frame to JPEG
+                    _, buffer = cv2.imencode('.jpg', frame)
+                    # Convert to base64
+                    frame_base64 = base64.b64encode(buffer).decode('utf-8')
+                    
+                    # Send frame data
+                    frame_data = {
+                        "type": "camera_frame",
+                        "data": {
+                            "timestamp": time.time(),
+                            "frame": frame_base64
+                        }
+                    }
+                    await websocket.send_json(frame_data)
                 
                 # Get telemetry data
                 # telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
                 # await websocket.send_json(telemetry_data)
-                # await asyncio.sleep(0.01)  # 10 FPS
+                
+                await asyncio.sleep(0.033)  # ~30 FPS
                 await websocket.receive_text()
             
             except WebSocketDisconnect:
@@ -106,6 +151,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"WebSocket error: {e}")
     finally:
+        rtsp_camera.release()
         await ws_manager.disconnect()
 
 @app.post("/lidar-data")
@@ -145,3 +191,56 @@ async def receive_lidar_data(data: dict):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/detection-frame")
+async def receive_detection_frame(data: dict):
+    try:
+        # Add debug logging at the start of the function
+        print("Received POST request to /detection-frame")
+        
+        # Send the frame data through WebSocket
+        detection_frame = {
+            "type": "detection_frame",
+            "data": {
+                "timestamp": int(time.time()),  # Generate timestamp on server
+                "frame": data  # Pass through the base64 encoded frame
+            }
+        }
+
+        await ws_manager.send_message(detection_frame)
+        
+        print("Successfully received and forwarded frame")
+        return {"status": "success"}
+
+    except Exception as e:
+        print(f"Error processing detection frame: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Initialize WebRTC manager
+webrtc_manager = WebRTCManager()
+
+# Endpoint for Raspberry Pi to connect
+@app.post("/raspberry-pi/offer")
+async def handle_raspberry_pi_offer(offer: dict):
+    try:
+        answer = await webrtc_manager.handle_offer(offer, source="raspberry_pi")
+        return answer
+    except Exception as e:
+        print(f"Error handling Raspberry Pi offer: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint for frontend clients to connect
+@app.post("/client/offer")
+async def handle_client_offer(offer: dict):
+    try:
+        if not webrtc_manager.has_video_source:
+            raise HTTPException(status_code=503, detail="No video source available")
+        answer = await webrtc_manager.handle_offer(offer, source="client")
+        return answer
+    except Exception as e:
+        print(f"Error handling client offer: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await webrtc_manager.close_connections()

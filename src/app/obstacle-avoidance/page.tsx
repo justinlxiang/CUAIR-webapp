@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import Header from '../components/Header';
 import styles from '../styles/Home.module.css';
 import { wsClient } from '../api/websocket';
-
+import Image from 'next/image';
 interface Cluster {
   center: [number, number];
   width: number;
@@ -30,7 +30,9 @@ const getClusterColor = (cluster: Cluster, idx: number) => {
 
 export default function Home() {
   const [lidarData, setLidarData] = useState<LidarData | null>(null);
+  const [detectionFrame, setDetectionFrame] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const peerRef = useRef<RTCPeerConnection | null>(null);
 
   useEffect(() => {
     wsClient.connect();
@@ -39,27 +41,67 @@ export default function Home() {
         if (message.type === 'lidar') {
             setLidarData(message.data);
         }
+        if (message.type === 'detection_frame') {
+            setDetectionFrame(message.data.frame);
+        }
     });
 
-    const currentVideo = videoRef.current;
+    async function setupWebRTC() {
+      try {
+        // Create peer connection
+        const pc = new RTCPeerConnection();
+        peerRef.current = pc;
 
-    // Start webcam
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices
-        .getUserMedia({ video: true })
-        .then((stream) => {
-          if (currentVideo) {
-            currentVideo.srcObject = stream;
+        // Handle incoming tracks
+        pc.ontrack = (event) => {
+          console.log("Received track:", event.track.kind);
+          if (videoRef.current && event.streams[0]) {
+            videoRef.current.srcObject = event.streams[0];
           }
-        })
-        .catch((err) => {
-          console.error("Error accessing webcam:", err);
+        };
+
+        // Create and send offer
+        const offer = await pc.createOffer({
+          offerToReceiveVideo: true,
+          offerToReceiveAudio: false
         });
+        await pc.setLocalDescription(offer);
+
+        // Send offer to server
+        const response = await fetch('http://localhost:8888/client/offer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sdp: pc.localDescription?.sdp,
+            type: pc.localDescription?.type,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
+
+        // Get and set remote description
+        const answer = await response.json();
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log("WebRTC connection established");
+      } catch (err) {
+        console.error("Error setting up WebRTC:", err);
+      }
     }
 
+    setupWebRTC();
+
+    const videoElement = videoRef.current;
+
     return () => {
-      if (currentVideo?.srcObject) {
-        const stream = currentVideo.srcObject as MediaStream;
+      if (peerRef.current) {
+        peerRef.current.close();
+      }
+      if (videoElement?.srcObject) {
+        const stream = videoElement.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
       }
     };
@@ -108,16 +150,29 @@ export default function Home() {
             </Card>
           </div>
           
-          <div className="mt-8">
+          <div className="mt-8 flex flex-col gap-4">
             <Card className={`bg-card border-border p-4 ${styles.card}`}>
-              <h2 className="text-xl font-bold text-card-foreground mb-4">Live Video Feed</h2>
+              <h2 className="text-xl font-bold text-card-foreground mb-4">Detection Frame Feed</h2>
+              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+                {detectionFrame && (
+                  <Image
+                    src={`data:image/jpeg;base64,${detectionFrame}`}
+                    alt="Detection Frame"
+                    className="w-full h-full object-cover"
+                    width={1280}
+                    height={720}
+                  />
+                )}
+              </div>
+            </Card>
+
+            <Card className={`bg-card border-border p-4 ${styles.card}`}>
+              <h2 className="text-xl font-bold text-card-foreground mb-4">WebRTC Video Feed</h2>
               <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
-                  muted
-                  style={{ display: 'block' }}
                   className="w-full h-full object-cover"
                 />
               </div>

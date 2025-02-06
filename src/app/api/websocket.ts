@@ -24,6 +24,12 @@ type WebSocketMessage = {
 } | {
     type: 'video';
     data: string;
+} | {
+    type: 'detection_frame';
+    data: {
+        timestamp: number;
+        frame: string;
+    };
 };
 
 export class WebSocketClient {
