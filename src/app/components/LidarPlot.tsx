@@ -45,7 +45,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
 
   return (
     <div className={styles.plotContainer}>
-      <h1 className="text-2xl font-bold text-white text-center">LIDAR Data</h1>
+      <h1 className="text-2xl font-bold text-black dark:text-white text-center">LIDAR Data</h1>
       <ScatterChart
         width={700}
         height={645}
@@ -57,8 +57,8 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           dataKey="x" 
           name="X" 
           unit="m"
-          stroke="#ff4d4d"
-          label={{ value: 'X (meters)', position: 'bottom', fill: '#FFFFFF' }}
+          stroke="currentColor"
+          label={{ value: 'X (meters)', position: 'bottom', fill: 'currentColor' }}
           domain={[-15, 15]}
           allowDataOverflow={true} // Prevent domain from auto-adjusting
           interval={0} // Show all ticks
@@ -69,8 +69,8 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           dataKey="y" 
           name="Y" 
           unit="m"
-          stroke="#ff4d4d"
-          label={{ value: 'Y (meters)', angle: -90, position: 'left', fill: '#FFFFFF' }}
+          stroke="currentColor"
+          label={{ value: 'Y (meters)', angle: -90, position: 'left', fill: 'currentColor' }}
           domain={[-15, 15]}
           allowDataOverflow={true} // Prevent domain from auto-adjusting
           interval={0} // Show all ticks
@@ -118,7 +118,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           x2={data.radius_threshold}
           y1={-data.radius_threshold}
           y2={data.radius_threshold}
-          stroke="#FFFFFF"
+          stroke="currentColor"
           strokeWidth={1}
           fill="none"
           shape={(props) => {
@@ -128,7 +128,7 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
                 cx={x + width/2} 
                 cy={y + height/2} 
                 r={width/2} 
-                stroke="#FFFFFF" 
+                stroke="currentColor" 
                 strokeWidth={1} 
                 fill="none"
               />
@@ -138,8 +138,8 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
         {/* Plot origin point */}
         <Scatter
           data={[{ x: 0, y: 0, z: 3 }]}
-          fill="#FFFFFF"
-          stroke="#FFFFFF"
+          fill="currentColor"
+          stroke="currentColor"
           r={10}
           isAnimationActive={false}
           shape="triangle"

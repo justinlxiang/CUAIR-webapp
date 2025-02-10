@@ -10,6 +10,7 @@ from fastapi.websockets import WebSocketDisconnect
 from obstacle_detection import ObstacleDetector
 from aiortc import VideoStreamTrack, RTCPeerConnection, RTCSessionDescription
 from webrtc_manager import WebRTCManager
+import requests
 
 app = FastAPI()
 
@@ -243,3 +244,22 @@ async def handle_client_offer(offer: dict):
 @app.on_event("shutdown")
 async def shutdown_event():
     await webrtc_manager.close_connections()
+
+
+@app.post("/start")
+async def start_lidar():
+    print("Forwarding start request to LiDAR service")
+    response = requests.post("http://127.0.0.1:5000/start", json={"name": "start"})
+    return response.json()
+
+@app.post("/stop")
+async def stop_lidar():
+    print("Forwarding stop request to LiDAR service")
+    response = requests.post("http://127.0.0.1:5000/stop", json={"name": "stop"}) 
+    return response.json()
+
+@app.get("/status")
+async def get_status():
+    print("Checking LiDAR service status")
+    response = requests.get("http://127.0.0.1:5000/status")
+    return response.json()
