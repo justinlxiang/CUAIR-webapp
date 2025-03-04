@@ -27,6 +27,7 @@ export default function Header() {
     { name: 'Home', href: '/' },
     { name: 'Obstacle Avoidance', href: '/obstacle-avoidance' },
     { name: 'Warning System', href: '/warning-system' },
+    { name: 'Mapping', href: '/mapping' },
     { name: 'System Monitor', href: '/system' },
   ];
 

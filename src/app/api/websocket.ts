@@ -30,6 +30,18 @@ type WebSocketMessage = {
         timestamp: number;
         frame: string;
     };
+}
+  | {
+    type: 'mapping_image';
+    data: {
+        image_url: string;
+        image_id: string;
+        timestamp: string;
+        latitude: number;
+        longitude: number;
+        altitude: number;
+        yaw: number;
+    };
 };
 
 export class WebSocketClient {

@@ -18,6 +18,7 @@ class WebRTCManager:
                 await pc.close()
                 self.pcs.discard(pc)
                 if source == "raspberry_pi":
+                    print("Closing Raspberry Pi connection")
                     self.raspberry_pi_pc = None
                     self.video_track = None
 

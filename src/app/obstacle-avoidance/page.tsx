@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import LidarPlot from '../components/LidarPlot';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,9 +34,10 @@ export default function Home() {
   const [detectionFrame, setDetectionFrame] = useState<string | null>(null);
   const [isLidarActive, setIsLidarActive] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isWebRTCConnected, setIsWebRTCConnected] = useState<boolean>(false);
   const peerRef = useRef<RTCPeerConnection | null>(null);
 
-  const checkLidarStatus = async () => {
+  const checkLidarStatus = useCallback(async () => {
     try {
       const response = await fetch('http://localhost:8888/status');
       if (response.ok) {
@@ -46,7 +47,7 @@ export default function Home() {
     } catch (error) {
       console.error('Error checking LiDAR status:', error);
     }
-  };
+  }, []);
 
   const toggleLidar = async () => {
     try {
@@ -67,69 +68,116 @@ export default function Home() {
     }
   };
 
+  // Function to set up WebRTC connection
+  const setupWebRTC = useCallback(async () => {
+    try {
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          {
+            urls: 'stun:stun.l.google.com:19302',
+          },
+        ],
+        iceCandidatePoolSize: 10
+      });
+      peerRef.current = pc;
+
+      // When a track is received from the server, assign the stream to the video element
+      pc.ontrack = (event) => {
+        console.log("Received track:", event.track.kind);
+        if (videoRef.current && event.streams[0]) {
+          // Clear any existing srcObject first
+          if (videoRef.current.srcObject) {
+            const oldStream = videoRef.current.srcObject as MediaStream;
+            oldStream.getTracks().forEach(track => track.stop());
+          }
+          
+          videoRef.current.srcObject = event.streams[0];
+          // videoRef.current.muted = true;
+          // videoRef.current.playsInline = true;
+          
+          // // Force video element to refresh
+          // videoRef.current.load();
+          
+          // // Try to play the video
+          // videoRef.current.play()
+          //   .then(() => {
+          //     console.log("Video playing successfully");
+          //     setIsWebRTCConnected(true);
+          //   })
+          //   .catch((e) => {
+          //     console.error("Error playing video:", e);
+          //   });
+        }
+      };
+      
+      // Add ice candidate handler for better connection
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log("New ICE candidate:", event.candidate.candidate);
+        }
+      };
+
+      // Connection state change handler
+      pc.onconnectionstatechange = () => {
+        console.log("Connection state:", pc.connectionState);
+        if (pc.connectionState === 'connected') {
+          setIsWebRTCConnected(true);
+        } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+          setIsWebRTCConnected(false);
+        }
+      };
+
+      // Create offer
+      const offer = await pc.createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: false });
+      await pc.setLocalDescription(offer);
+
+      // Send offer to signaling server and get answer
+      const response = await fetch('http://localhost:8888/client/offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sdp: pc.localDescription?.sdp,
+          type: pc.localDescription?.type,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      const answer = await response.json();
+      await pc.setRemoteDescription(answer);
+      console.log("WebRTC connection established");
+    } catch (err) {
+      console.error("Error setting up WebRTC:", err);
+      // Retry after delay
+      setTimeout(setupWebRTC, 5000);
+    }
+  }, []);
+
+  // Add a reconnect button for WebRTC
+  const reconnectWebRTC = () => {
+    if (peerRef.current) {
+      peerRef.current.close();
+      peerRef.current = null;
+    }
+    setupWebRTC();
+  };
+
   useEffect(() => {
     wsClient.connect();
-    checkLidarStatus();
-    
+    // checkLidarStatus();
     wsClient.onMessage((message) => {
-        if (message.type === 'lidar') {
-            setLidarData(message.data);
-        }
-        if (message.type === 'detection_frame') {
-            setDetectionFrame(message.data.frame);
-        }
+      if (message.type === 'lidar') {
+        setLidarData(message.data);
+      }
+      if (message.type === 'detection_frame') {
+        setDetectionFrame(message.data?.frame);
+      }
     });
 
-    // async function setupWebRTC() {
-    //   try {
-    //     // Create peer connection
-    //     const pc = new RTCPeerConnection();
-    //     peerRef.current = pc;
-
-    //     // Handle incoming tracks
-    //     pc.ontrack = (event) => {
-    //       console.log("Received track:", event.track.kind);
-    //       if (videoRef.current && event.streams[0]) {
-    //         videoRef.current.srcObject = event.streams[0];
-    //       }
-    //     };
-
-        // Create and send offer
-      //   const offer = await pc.createOffer({
-      //     offerToReceiveVideo: true,
-      //     offerToReceiveAudio: false
-      //   });
-      //   await pc.setLocalDescription(offer);
-
-      //   // Send offer to server
-      //   const response = await fetch('http://localhost:8888/client/offer', {
-      //     method: 'POST',
-      //     headers: {
-      //       'Content-Type': 'application/json',
-      //     },
-      //     body: JSON.stringify({
-      //       sdp: pc.localDescription?.sdp,
-      //       type: pc.localDescription?.type,
-      //     }),
-      //   });
-
-      //   if (!response.ok) {
-      //     throw new Error(`Server returned ${response.status}`);
-      //   }
-
-      //   // Get and set remote description
-      //   const answer = await response.json();
-      //   await pc.setRemoteDescription(new RTCSessionDescription(answer));
-      //   console.log("WebRTC connection established");
-      // } catch (err) {
-      //   console.error("Error setting up WebRTC:", err);
-      // }
-    // }
-
-    // setupWebRTC();
+    // Set up WebRTC connection once on mount
+    setupWebRTC();
 
     const videoElement = videoRef.current;
-
     return () => {
       if (peerRef.current) {
         peerRef.current.close();
@@ -139,7 +187,7 @@ export default function Home() {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [checkLidarStatus, setupWebRTC]);
 
   return (
     <>
@@ -203,24 +251,44 @@ export default function Home() {
               <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
                 {detectionFrame && (
                   <Image
-                    src={`data:image/jpeg;base64,${detectionFrame}`}
+                    src={`data:image/jpeg;base64,${detectionFrame?.frame}`}
                     alt="Detection Frame"
                     className="w-full h-full object-cover"
                     width={1280}
                     height={720}
+                    onError={(e) => console.error('Error loading image:', e)}
                   />
                 )}
               </div>
             </Card>
 
             <Card className={`bg-card border-border p-4 ${styles.card}`}>
-              <h2 className="text-xl font-bold text-card-foreground mb-4">WebRTC Video Feed</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-card-foreground">WebRTC Video Feed</h2>
+                <Button 
+                  onClick={reconnectWebRTC} 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isWebRTCConnected}
+                >
+                  {isWebRTCConnected ? 'Connected' : 'Reconnect'}
+                </Button>
+              </div>
               <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
+                  muted
                   className="w-full h-full object-cover"
+                  style={{ display: 'block' }}
+                  onLoadedMetadata={() => {
+                    if (videoRef.current) {
+                      videoRef.current.play()
+                        .then(() => console.log("Video playing successfully"))
+                        .catch(e => console.error("Error playing video:", e));
+                    }
+                  }}
                 />
               </div>
             </Card>
