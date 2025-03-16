@@ -6,11 +6,11 @@ from typing import List, Dict
 import time
 import asyncio
 from fastapi.websockets import WebSocketDisconnect
-from webrtc_manager import WebRTCManager
 import requests
 import base64
 from pathlib import Path
 import json
+import cv2
 
 app = FastAPI()
 
@@ -110,23 +110,6 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             try:
-                # Get frame from RTSP stream
-                # frame = rtsp_camera.read_frame()
-                # if frame is not None:
-                #     # Encode frame to JPEG
-                #     _, buffer = cv2.imencode('.jpg', frame)
-                #     # Convert to base64
-                #     frame_base64 = base64.b64encode(buffer).decode('utf-8')
-                    
-                #     # Send frame data
-                #     frame_data = {
-                #         "type": "camera_frame",
-                #         "data": {
-                #             "timestamp": time.time(),
-                #             "frame": frame_base64
-                #         }
-                #     }
-                #     await websocket.send_json(frame_data)
                 
                 # Get telemetry data
                 # telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
@@ -142,7 +125,6 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"WebSocket error: {e}")
     finally:
-        # rtsp_camera.release()
         await ws_manager.disconnect()
 
 @app.websocket("/ws/detection")
@@ -160,7 +142,7 @@ async def detection_websocket_endpoint(websocket: WebSocket):
                     "type": "detection_frame",
                     "data": {
                         "timestamp": int(time.time()),
-                        "frame": data
+                        "frame": data["frame"]
                     }
                 }
                 
@@ -213,36 +195,6 @@ async def receive_lidar_data(data: dict):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# Initialize WebRTC manager
-webrtc_manager = WebRTCManager()
-
-# Endpoint for Raspberry Pi to connect
-@app.post("/raspberry-pi/offer")
-async def handle_raspberry_pi_offer(offer: dict):
-    try:
-        answer = await webrtc_manager.handle_offer(offer, source="raspberry_pi")
-        return answer
-    except Exception as e:
-        print(f"Error handling Raspberry Pi offer: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Endpoint for frontend clients to connect
-@app.post("/client/offer")
-async def handle_client_offer(offer: dict):
-    try:
-        if not webrtc_manager.has_video_source:
-            raise HTTPException(status_code=503, detail="No video source available")
-        answer = await webrtc_manager.handle_offer(offer, source="client")
-        return answer
-    except Exception as e:
-        print(f"Error handling client offer: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await webrtc_manager.close_connections()
-
 
 @app.post("/start")
 async def start_lidar():
