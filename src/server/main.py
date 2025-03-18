@@ -11,6 +11,7 @@ import base64
 from pathlib import Path
 import json
 import cv2
+from websocket_manager import WebSocketManager
 
 app = FastAPI()
 
@@ -31,33 +32,6 @@ MAPPING_METADATA_DIR.mkdir(exist_ok=True)
 
 # Mount the mapping_images directory to serve files
 app.mount("/mapping_images", StaticFiles(directory="mapping_images"), name="mapping_images")
-
-class WebSocketManager:
-    def __init__(self):
-        self.connection: WebSocket | None = None
-        self.detection_connection: WebSocket | None = None
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.connection = websocket
-
-    async def connect_detection(self, websocket: WebSocket):
-        await websocket.accept()
-        self.detection_connection = websocket
-
-    async def disconnect(self):
-        self.connection = None
-
-    async def disconnect_detection(self):
-        self.detection_connection = None
-
-    async def send_message(self, message: dict):
-        if self.connection:
-            try:
-                await self.connection.send_json(message)
-            except Exception as e:
-                print(f"Error sending to websocket: {e}")
-                self.connection = None
 
 # Initialize the WebSocket manager
 ws_manager = WebSocketManager()
@@ -103,19 +77,20 @@ def generate_telemetry_data():
         "yaw": float(yaw)
     }
 
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await ws_manager.connect(websocket)
+@app.websocket("/ws/lidar")
+async def lidar_websocket_endpoint(websocket: WebSocket):
+    await ws_manager.connect_lidar(websocket)
     
     try:
         while True:
             try:
-                
                 # Get telemetry data
                 # telemetry_data = {"type": "telemetry", "data": generate_telemetry_data()}
                 # await websocket.send_json(telemetry_data)
                 
-                await websocket.receive_text()  # Wait for next message
+                # Add a small delay to avoid overwhelming the client
+                # await asyncio.sleep(0.1)  # 100ms delay between messages
+                await websocket.receive_text()
             
             except WebSocketDisconnect:
                 break
@@ -125,18 +100,56 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"WebSocket error: {e}")
     finally:
-        await ws_manager.disconnect()
+        await ws_manager.disconnect_lidar()
+
+@app.websocket("/ws/mapping")
+async def mapping_websocket_endpoint(websocket: WebSocket):
+    await ws_manager.connect_mapping(websocket)
+    
+    try:
+        while True:
+            try:
+                await websocket.receive_text()
+            
+            except WebSocketDisconnect:
+                break
+            except asyncio.CancelledError:
+                break
+            
+    except Exception as e:
+        print(f"Mapping WebSocket error: {e}")
+    finally:
+        await ws_manager.disconnect_mapping()
+
+@app.websocket("/ws/detection_stream")
+async def detection_websocket_endpoint(websocket: WebSocket):
+    await ws_manager.connect_detection_frontend(websocket)
+    
+    try:
+        while True:
+            try:
+                await websocket.receive_text()
+            
+            except WebSocketDisconnect:
+                break
+            except asyncio.CancelledError:
+                break
+            
+    except Exception as e:
+        print(f"Detection WebSocket error: {e}")
+    finally:
+        await ws_manager.disconnect_detection_frontend()
 
 @app.websocket("/ws/detection")
 async def detection_websocket_endpoint(websocket: WebSocket):
-    await ws_manager.connect_detection(websocket)
+    await ws_manager.connect_pi_detection(websocket)
     
     try:
         while True:
             try:
                 # Receive frame data from Raspberry Pi
                 data = await websocket.receive_json()
-                
+                print("Received frame data from Raspberry Pi")
                 # Forward the frame data to frontend client
                 detection_frame = {
                     "type": "detection_frame",
@@ -146,7 +159,7 @@ async def detection_websocket_endpoint(websocket: WebSocket):
                     }
                 }
                 
-                await ws_manager.send_message(detection_frame)
+                await ws_manager.send_frontend_detection_message(detection_frame)
                 
             except WebSocketDisconnect:
                 break
@@ -156,14 +169,17 @@ async def detection_websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         print(f"Detection WebSocket error: {e}")
     finally:
-        await ws_manager.disconnect_detection()
+        await ws_manager.disconnect_pi_detection()
 
 @app.post("/lidar-data")
 async def receive_lidar_data(data: dict):
+    if not ws_manager.connection:
+        print("WebSocket connection not established")
+    
     try:
         # Add debug logging at the start of the function
         print("Received POST request to /lidar-data")
-        print("Request data:", data)
+        # print("Request data:", data)
         
         # Extract data from the request
         scan_points = data.get("scan_points", [])
@@ -180,16 +196,15 @@ async def receive_lidar_data(data: dict):
         }
         
         # Send WebSocket message first
-        await ws_manager.send_message(lidar_data)
+        await ws_manager.send_lidar_message(lidar_data)
         
         # Update state after sending (non-blocking)
         lidar_state.scan_points = scan_points
         lidar_state.point_labels = data.get("point_labels", [])
         lidar_state.bounding_boxes = bounding_boxes
 
-        # Optional: Move logging to after sending data
-        print("Received LiDAR data: {} points, {} clusters".format(
-            len(scan_points), len(bounding_boxes)))
+        # print("Received LiDAR data: {} points, {} clusters".format(
+            # len(scan_points), len(bounding_boxes)))
 
         return {"status": "success"}
 
@@ -199,19 +214,19 @@ async def receive_lidar_data(data: dict):
 @app.post("/start")
 async def start_lidar():
     print("Forwarding start request to LiDAR service")
-    response = requests.post("http://127.0.0.1:5000/start", json={"name": "start"})
+    response = requests.post("http://10.49.82.237:5000/start", json={"name": "start"})
     return response.json()
 
 @app.post("/stop")
 async def stop_lidar():
     print("Forwarding stop request to LiDAR service")
-    response = requests.post("http://127.0.0.1:5000/stop", json={"name": "stop"}) 
+    response = requests.post("http://10.49.82.237:5000/stop", json={"name": "stop"}) 
     return response.json()
 
 @app.get("/status")
 async def get_status():
     print("Checking LiDAR service status")
-    response = requests.get("http://127.0.0.1:5000/status")
+    response = requests.get("http://10.49.82.237:5000/status")
     return response.json()
 
 @app.post("/mapping/upload")
@@ -253,7 +268,7 @@ async def save_new_mapping(data: dict):
             "data": metadata
         }
         
-        await ws_manager.send_message(mapping_image)
+        await ws_manager.send_mapping_image_message(mapping_image)
         return {"status": "success", "image_url": image_url}
 
     except Exception as e:

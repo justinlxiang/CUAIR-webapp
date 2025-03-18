@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Header from '../components/Header'
 import styles from '../styles/Home.module.css'
-import { wsClient } from '../api/websocket'
+import { mappingWsClient } from '../api/websocket'
 import { Trash2 } from 'lucide-react'
 
 export default function MappingPage() {
@@ -24,8 +24,8 @@ export default function MappingPage() {
   const [selectedImageData, setSelectedImageData] = useState<typeof images[0] | null>(null)
 
   useEffect(() => {
-    wsClient.connect();
-    wsClient.onMessage((message) => {
+    mappingWsClient.connect();
+    mappingWsClient.onMessage((message) => {
       if (message.type === 'mapping_image') {
         setImages(prevImages => [...prevImages, message.data]);
       }

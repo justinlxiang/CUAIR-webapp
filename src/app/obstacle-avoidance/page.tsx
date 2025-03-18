@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Header from '../components/Header';
 import styles from '../styles/Home.module.css';
-import { wsClient } from '../api/websocket';
+import { lidarWsClient, videoWsClient } from '../api/websocket';
 import Image from 'next/image';
 
 interface Cluster {
@@ -72,12 +72,21 @@ export default function Home() {
   }
 
   useEffect(() => {
-    wsClient.connect();
+    // Connect to WebSockets
+    lidarWsClient.connect();
+    videoWsClient.connect();
+    
+    // Check LiDAR status
     checkLidarStatus();
-    wsClient.onMessage((message) => {
+    
+    // Set up specialized message handlers
+    lidarWsClient.onMessage((message) => {
       if (message.type === 'lidar') {
         setLidarData(message.data);
       }
+    });
+    
+    videoWsClient.onMessage((message) => {
       if (message.type === 'detection_frame') {
         setDetectionFrame({
           timestamp: message.data.timestamp,
@@ -85,6 +94,12 @@ export default function Home() {
         });
       }
     });
+    
+    // Clean up WebSocket connections when component unmounts
+    return () => {
+      lidarWsClient.disconnect();
+      videoWsClient.disconnect();
+    };
   }, [checkLidarStatus]);
 
   return (

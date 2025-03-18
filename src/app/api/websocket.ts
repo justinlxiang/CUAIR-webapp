@@ -44,27 +44,33 @@ type WebSocketMessage = {
     };
 };
 
+// Base WebSocket class that can be extended
 export class WebSocketClient {
-    private ws: WebSocket | null = null;
-    private messageHandler: ((message: WebSocketMessage) => void) | null = null;
+    protected ws: WebSocket | null = null;
+    protected messageHandler: ((message: WebSocketMessage) => void) | null = null;
+    protected endpoint: string;
+
+    constructor(endpoint: string) {
+        this.endpoint = endpoint;
+    }
 
     connect() {
         if (this.ws?.readyState === WebSocket.OPEN) {
             return;
         }
 
-        this.ws = new WebSocket('ws://localhost:8888/ws');
+        this.ws = new WebSocket(`ws://10.48.61.73:8888${this.endpoint}`);
 
         this.ws.onopen = () => {
-            console.log('WebSocket connected');
+            console.log(`WebSocket connected to ${this.endpoint}`);
         };
 
         this.ws.onmessage = (event) => {
             try {
-                const message = JSON.parse(event.data);
+                const message = JSON.parse(event.data) as WebSocketMessage;
                 this.messageHandler?.(message);
             } catch (error) {
-                console.error('WebSocket: Error processing message:', error);
+                console.error(`WebSocket ${this.endpoint}: Error processing message:`, error);
             }
         };
 
@@ -77,7 +83,34 @@ export class WebSocketClient {
     onMessage(handler: (message: WebSocketMessage) => void) {
         this.messageHandler = handler;
     }
+
+    disconnect() {
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
+    }
 }
 
-// Single instance for the application
-export const wsClient = new WebSocketClient(); 
+export class LidarWebSocketClient extends WebSocketClient {
+    constructor() {
+        super('/ws/lidar');
+    }
+}
+
+export class VideoWebSocketClient extends WebSocketClient {
+    constructor() {
+        super('/ws/detection_stream');
+    }
+}
+
+export class MappingWebSocketClient extends WebSocketClient {
+    constructor() {
+        super('/ws/mapping');
+    }
+}
+
+// Create separate instances
+export const lidarWsClient = new LidarWebSocketClient();
+export const videoWsClient = new VideoWebSocketClient(); 
+export const mappingWsClient = new MappingWebSocketClient();
