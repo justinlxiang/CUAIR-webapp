@@ -23,8 +23,8 @@ class WebSocketManager:
         await websocket.accept()
         self.mapping_connection = websocket
 
-    async def disconnect(self):
-        self.connection = None
+    async def disconnect_lidar(self):
+        self.lidar_connection = None
 
     async def disconnect_pi_detection(self):
         self.pi_detection_connection = None

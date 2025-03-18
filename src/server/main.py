@@ -173,7 +173,7 @@ async def detection_websocket_endpoint(websocket: WebSocket):
 
 @app.post("/lidar-data")
 async def receive_lidar_data(data: dict):
-    if not ws_manager.connection:
+    if not ws_manager.lidar_connection:
         print("WebSocket connection not established")
     
     try:
