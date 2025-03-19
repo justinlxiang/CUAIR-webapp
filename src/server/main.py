@@ -211,23 +211,42 @@ async def receive_lidar_data(data: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/start")
+@app.post("/lidar/start")
 async def start_lidar():
     print("Forwarding start request to LiDAR service")
     response = requests.post("http://10.49.82.237:5000/start", json={"name": "start"})
     return response.json()
 
-@app.post("/stop")
+@app.post("/lidar/stop")
 async def stop_lidar():
     print("Forwarding stop request to LiDAR service")
     response = requests.post("http://10.49.82.237:5000/stop", json={"name": "stop"}) 
     return response.json()
 
-@app.get("/status")
+@app.get("/lidar/status")
 async def get_status():
     print("Checking LiDAR service status")
     response = requests.get("http://10.49.82.237:5000/status")
     return response.json()
+
+@app.post("/stream/start")
+async def start_camera():
+    print("Forwarding start request to camera service")
+    response = requests.post("http://10.49.82.237:6000/start", json={"name": "start"})
+    return response.json()
+
+@app.post("/stream/stop")
+async def stop_camera():
+    print("Forwarding stop request to camera service")
+    response = requests.post("http://10.49.82.237:6000/stop", json={"name": "stop"})
+    return response.json()
+
+@app.get("/stream/status")
+async def get_camera_status():
+    print("Checking camera service status")
+    response = requests.get("http://10.49.82.237:6000/status")
+    return response.json()
+
 
 @app.post("/mapping/upload")
 async def save_new_mapping(data: dict):
