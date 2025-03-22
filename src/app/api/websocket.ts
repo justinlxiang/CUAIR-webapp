@@ -110,7 +110,14 @@ export class MappingWebSocketClient extends WebSocketClient {
     }
 }
 
+export class TelemetryWebSocketClient extends WebSocketClient {
+    constructor() {
+        super('/ws/telemetry');
+    }
+}
+
 // Create separate instances
 export const lidarWsClient = new LidarWebSocketClient();
 export const videoWsClient = new VideoWebSocketClient(); 
 export const mappingWsClient = new MappingWebSocketClient();
+export const telemetryWsClient = new TelemetryWebSocketClient();

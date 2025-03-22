@@ -40,7 +40,7 @@ export default function MappingPage() {
 
   const fetchImages = async () => {
     try {
-      const response = await fetch('http://localhost:8888/mapping/images')
+      const response = await fetch('http://10.48.61.73:8888/mapping/images')
       const data = await response.json()
       console.log(data)
       setImages(data.images)
@@ -55,13 +55,13 @@ export default function MappingPage() {
       
       switch (command) {
         case 'start':
-          endpoint = 'http://localhost:8888/mapping/start'
+          endpoint = 'http://10.48.61.73:8888/mapping/start'
           break
         case 'stop':
-          endpoint = 'http://localhost:8888/mapping/stop'
+          endpoint = 'http://10.48.61.73:8888/mapping/stop'
           break
         case 'generate':
-          endpoint = 'http://localhost:8888/mapping/generate'
+          endpoint = 'http://10.48.61.73:8888/mapping/generate'
       }
 
       const response = await fetch(endpoint, {
@@ -89,7 +89,7 @@ export default function MappingPage() {
   const handleSelectImage = (image: typeof images[0]) => {
     const fullImageUrl = image.image_url.startsWith('http') 
       ? image.image_url 
-      : `http://localhost:8888${image.image_url}`;
+      : `http://10.48.61.73:8888${image.image_url}`;
     
     setSelectedImage(fullImageUrl);
     setSelectedImageData(image);
@@ -98,7 +98,7 @@ export default function MappingPage() {
   const handleDeleteImage = async (imageId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent image selection when clicking delete
     try {
-      const response = await fetch(`http://localhost:8888/mapping/images/${imageId}`, {
+      const response = await fetch(`http://10.48.61.73:8888/mapping/images/${imageId}`, {
         method: 'DELETE',
       });
 

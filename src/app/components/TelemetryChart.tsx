@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { wsClient } from '../api/websocket';
+import { telemetryWsClient } from '../api/websocket';
 
 const MAX_DATA_POINTS = 50;
 
@@ -16,9 +16,9 @@ const TelemetryChart = dynamic(() => Promise.resolve(function Chart() {
     }[] | null>(null);
 
     useEffect(() => {
-        wsClient.connect();
+        telemetryWsClient.connect();
 
-        wsClient.onMessage((message) => {
+        telemetryWsClient.onMessage((message) => {
             if (message.type === 'telemetry') {
                 setTelemetryData((prevData) => {
                     const newData = [...(prevData || []), message.data];
