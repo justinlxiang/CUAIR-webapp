@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import LidarPlot from '../components/LidarPlot';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Header from '../components/Header';
 import styles from '../styles/Home.module.css';
-import { lidarWsClient, videoWsClient } from '../api/websocket';
+import { lidarWsClient, videoWsClient, WebSocketMessage } from '../api/websocket';
 import Image from 'next/image';
 
 interface Cluster {
@@ -52,7 +52,7 @@ export default function Home() {
     }
   }, []);
 
-  const toggleLidar = async () => {
+  const toggleLidar = useCallback(async () => {
     try {
       const endpoint = isLidarActive ? 'stop' : 'start';
       const response = await fetch(`http://10.48.61.73:8888/lidar/${endpoint}`, {
@@ -69,7 +69,22 @@ export default function Home() {
     } catch (error) {
       console.error(`Error ${isLidarActive ? 'stopping' : 'starting'} LiDAR:`, error);
     }
-  }
+  }, [isLidarActive]);
+
+  const handleLidarMessage = useCallback((message: WebSocketMessage) => {
+    if (message.type === 'lidar') {
+      setLidarData(message.data);
+    }
+  }, []);
+
+  const handleVideoMessage = useCallback((message: WebSocketMessage) => {
+    if (message.type === 'detection_frame') {
+      setDetectionFrame({
+        timestamp: message.data.timestamp,
+        frame: message.data.frame
+      });
+    }
+  }, []);
 
   useEffect(() => {
     // Connect to WebSockets
@@ -80,27 +95,57 @@ export default function Home() {
     checkLidarStatus();
     
     // Set up specialized message handlers
-    lidarWsClient.onMessage((message) => {
-      if (message.type === 'lidar') {
-        setLidarData(message.data);
-      }
-    });
-    
-    videoWsClient.onMessage((message) => {
-      if (message.type === 'detection_frame') {
-        setDetectionFrame({
-          timestamp: message.data.timestamp,
-          frame: message.data.frame
-        });
-      }
-    });
+    lidarWsClient.onMessage(handleLidarMessage);
+    videoWsClient.onMessage(handleVideoMessage);
     
     // Clean up WebSocket connections when component unmounts
     return () => {
       lidarWsClient.disconnect();
       videoWsClient.disconnect();
     };
-  }, [checkLidarStatus]);
+  }, [checkLidarStatus, handleLidarMessage, handleVideoMessage]);
+
+  const renderDetectionFrame = useMemo(() => {
+    if (!detectionFrame) return null;
+    return (
+      <Image
+        src={`data:image/jpeg;base64,${detectionFrame.frame}`}
+        alt="Detection Frame"
+        className="w-full h-full object-cover"
+        width={1280}
+        height={720}
+        onError={(e) => console.error('Error loading image:', e)}
+        priority
+        unoptimized
+        key="detection-frame-image"
+      />
+    );
+  }, [detectionFrame]);
+
+  const renderClusters = useMemo(() => {
+    if (!lidarData?.clusters) return null;
+    return lidarData.clusters.map((cluster, idx) => (
+      <div 
+        key={idx}
+        className="px-4 py-3 rounded-lg border flex justify-between items-center"
+        style={{
+          borderColor: getClusterColor(cluster, idx),
+          color: getClusterColor(cluster, idx)
+        }}
+      >
+        <div>
+          <div>ID: {cluster.id || 'Unknown'}</div>
+          <div>Movement: {cluster.movement?.toFixed(2)}</div>
+          <div>Moving Towards Lidar: {cluster.moving_towards_lidar ? 'Yes' : 'No'}</div>
+        </div>
+        <div>
+          <div>Center: ({cluster.center[0].toFixed(2)}, {cluster.center[1].toFixed(2)})</div>
+          <div>Width: {cluster.width.toFixed(2)}</div>
+          <div>Height: {cluster.height.toFixed(2)}</div>
+        </div>
+      </div>
+    ));
+  }, [lidarData?.clusters]);
 
   return (
     <>
@@ -133,27 +178,7 @@ export default function Home() {
             <Card className={`bg-card border-border p-4 ${styles.card}`} style={{ width: '500px' }}>
               <h2 className="text-xl font-bold text-card-foreground mb-4">Detected Obstacles</h2>
               <div className="flex flex-col gap-3">
-                {lidarData?.clusters.map((cluster, idx) => (
-                  <div 
-                    key={idx}
-                    className="px-4 py-3 rounded-lg border flex justify-between items-center"
-                    style={{
-                      borderColor: getClusterColor(cluster, idx),
-                      color: getClusterColor(cluster, idx)
-                    }}
-                  >
-                    <div>
-                      <div>ID: {cluster.id || 'Unknown'}</div>
-                      <div>Movement: {cluster.movement?.toFixed(2)}</div>
-                      <div>Moving Towards Lidar: {cluster.moving_towards_lidar ? 'Yes' : 'No'}</div>
-                    </div>
-                    <div>
-                      <div>Center: ({cluster.center[0].toFixed(2)}, {cluster.center[1].toFixed(2)})</div>
-                      <div>Width: {cluster.width.toFixed(2)}</div>
-                      <div>Height: {cluster.height.toFixed(2)}</div>
-                    </div>
-                  </div>
-                ))}
+                {renderClusters}
               </div>
             </Card>
           </div>
@@ -162,19 +187,7 @@ export default function Home() {
             <Card className={`bg-card border-border p-4 ${styles.card}`}>
               <h2 className="text-xl font-bold text-card-foreground mb-4">Detection Frame Feed</h2>
               <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
-                {detectionFrame ? (
-                  <Image
-                    src={`data:image/jpeg;base64,${detectionFrame.frame}`}
-                    alt="Detection Frame"
-                    className="w-full h-full object-cover"
-                    width={1280}
-                    height={720}
-                    onError={(e) => console.error('Error loading image:', e)}
-                    priority
-                    unoptimized
-                    key="detection-frame-image"
-                  />
-                ) : (
+                {renderDetectionFrame || (
                   <div className="w-full h-full flex items-center justify-center text-gray-400">
                     No detection frame available
                   </div>

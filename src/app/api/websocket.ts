@@ -1,4 +1,4 @@
-type WebSocketMessage = {
+export type WebSocketMessage = {
     type: 'lidar';
     data: {
         points: number[][];
@@ -30,8 +30,7 @@ type WebSocketMessage = {
         timestamp: number;
         frame: string;
     };
-}
-  | {
+} | {
     type: 'mapping_image';
     data: {
         image_url: string;

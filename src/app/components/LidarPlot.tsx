@@ -25,23 +25,35 @@ interface LidarData {
   radius_threshold: number;
 }
 
-const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: LidarData | null }) {
+const LidarPlot = React.memo(function Plot({ data }: { data: LidarData | null }) {
   // Add debug logging
   React.useEffect(() => {
     console.log('Plot update:', new Date().toISOString());
   }, [data]);
 
   // Move hooks before any conditional returns
-  const formatPoints = React.useCallback((points: number[][]): Point[] => {
+  const formatPoints = React.useMemo(() => (points: number[][]): Point[] => {
     return points.map(([x, y]) => ({ x, y, z: 6 }));
   }, []);
 
-  const getClusterColor = React.useCallback((cluster: Cluster, idx: number) => {
+  const getClusterColor = React.useMemo(() => (cluster: Cluster, idx: number) => {
     const colorId = cluster.id ?? idx;
     return `hsl(${(colorId * 137) % 360}, 70%, 50%)`;
   }, []);
 
-  if (!data) return <div>No incoming data...</div>;
+  const formattedData = React.useMemo(() => {
+    if (!data) return null;
+    return {
+      points: formatPoints(data.points),
+      clusters: data.clusters.map((cluster, idx) => ({
+        ...cluster,
+        points: formatPoints(cluster.points),
+        color: getClusterColor(cluster, idx)
+      }))
+    };
+  }, [data, formatPoints, getClusterColor]);
+
+  if (!formattedData) return <div>No incoming data...</div>;
 
   return (
     <div className={styles.plotContainer}>
@@ -60,9 +72,9 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           stroke="currentColor"
           label={{ value: 'X (meters)', position: 'bottom', fill: 'currentColor' }}
           domain={[-15, 15]}
-          allowDataOverflow={true} // Prevent domain from auto-adjusting
-          interval={0} // Show all ticks
-          tickCount={7} // Will create ~6 evenly spaced intervals
+          allowDataOverflow={true}
+          interval={0}
+          tickCount={7}
         />
         <YAxis 
           type="number" 
@@ -72,40 +84,40 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
           stroke="currentColor"
           label={{ value: 'Y (meters)', angle: -90, position: 'left', fill: 'currentColor' }}
           domain={[-15, 15]}
-          allowDataOverflow={true} // Prevent domain from auto-adjusting
-          interval={0} // Show all ticks
-          tickCount={7} // Will create ~6 evenly spaced intervals
+          allowDataOverflow={true}
+          interval={0}
+          tickCount={7}
         />
         <ZAxis type="number" dataKey="z" range={[0, 100]} name="size"/>
 
         {/* Plot all points */}
         <Scatter 
-          data={formatPoints(data.points)} 
+          data={formattedData.points} 
           fill="#00FFFF"
           opacity={0.6}
           isAnimationActive={false}
         />
-        
+
         {/* Plot clusters - simplified version */}
-        {data.clusters.map((cluster, idx) => (
+        {formattedData.clusters.map((cluster, idx) => (
           <Scatter
             key={idx}
-            data={formatPoints(cluster.points)}
-            fill={getClusterColor(cluster, idx)}
+            data={cluster.points}
+            fill={cluster.color}
             opacity={0.8}
             isAnimationActive={false}
           />
         ))}
-
-        {/* Plot bounding boxes separately */}
-        {data.clusters.map((cluster, idx) => (
+        
+        {/* Plot clusters */}
+        {formattedData.clusters.map((cluster, idx) => (
           <ReferenceArea
             key={idx}
             x1={cluster.center[0] - cluster.width/2}
             x2={cluster.center[0] + cluster.width/2}
             y1={cluster.center[1] - cluster.height/2}
             y2={cluster.center[1] + cluster.height/2}
-            stroke={getClusterColor(cluster, idx)}
+            stroke={cluster.color}
             strokeWidth={2}
             strokeDasharray="5 5"
             fill="none"
@@ -113,28 +125,30 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
         ))}
 
         {/* Plot radius circle */}
-        <ReferenceArea
-          x1={-data.radius_threshold}
-          x2={data.radius_threshold}
-          y1={-data.radius_threshold}
-          y2={data.radius_threshold}
-          stroke="currentColor"
-          strokeWidth={1}
-          fill="none"
-          shape={(props) => {
-            const { x, y, width, height } = props;
-            return (
-              <circle 
-                cx={x + width/2} 
-                cy={y + height/2} 
-                r={width/2} 
-                stroke="currentColor" 
-                strokeWidth={1} 
-                fill="none"
-              />
-            );
-          }}
-        />
+        {data && (
+          <ReferenceArea
+            x1={-data.radius_threshold}
+            x2={data.radius_threshold}
+            y1={-data.radius_threshold}
+            y2={data.radius_threshold}
+            stroke="currentColor"
+            strokeWidth={1}
+            fill="none"
+            shape={(props) => {
+              const { x, y, width, height } = props;
+              return (
+                <circle 
+                  cx={x + width/2} 
+                  cy={y + height/2} 
+                  r={width/2} 
+                  stroke="currentColor" 
+                  strokeWidth={1} 
+                  fill="none"
+                />
+              );
+            }}
+          />
+        )}
         {/* Plot origin point */}
         <Scatter
           data={[{ x: 0, y: 0, z: 3 }]}
@@ -147,9 +161,9 @@ const LidarPlot = dynamic(() => Promise.resolve(function Plot({ data }: { data: 
       </ScatterChart>
     </div>
   );
-}), { 
+});
+
+export default dynamic(() => Promise.resolve(LidarPlot), { 
   ssr: false,
   loading: () => <div>Loading plot...</div>
 });
-
-export default LidarPlot;
