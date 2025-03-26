@@ -18,34 +18,20 @@ export default function Home() {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
-    return (
-      <>
-        <Header />
-        <div className="relative min-h-screen">
-          <div className="absolute inset-0 z-0">
-            <div className="w-full h-full" />
-          </div>
-          <main className="relative z-10 p-6">
-            {/* Rest of your content */}
-          </main>
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <Header />
       <div className="relative min-h-screen">
-        <div className="absolute inset-0 z-10 pointer-events-auto bg-transparent mt-8">
-          <Orb 
-            hue={0}
-            hoverIntensity={0.5}
-            rotateOnHover={true}
-            forceHoverState={false}
-          />
-        </div>
+        {mounted && (
+          <div className="absolute inset-0 z-10 pointer-events-auto bg-transparent mt-8">
+            <Orb 
+              hue={0}
+              hoverIntensity={0.5}
+              rotateOnHover={true}
+              forceHoverState={false}
+            />
+          </div>
+        )}
         <main className="relative z-20 p-6 pointer-events-none">
           <div className="text-center mb-12">
             <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 via-pink-400 to-purple-500 bg-[length:300%_100%] animate-gradient-glow mb-4">The Nexis</h1>
