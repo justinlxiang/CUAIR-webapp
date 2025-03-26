@@ -9,6 +9,27 @@ export default {
   ],
   theme: {
   	extend: {
+      keyframes: {
+        shine: {
+          '100%': { transform: 'translateX(100%)' }
+        },
+        gradient: {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' }
+        },
+        'pulse-glow': {
+          '0%, 100%': { 
+            textShadow: '0 0 15px rgba(168,85,247,0.4), 0 0 30px rgba(168,85,247,0.3), 0 0 45px rgba(168,85,247,0.2)'
+          },
+          '50%': { 
+            textShadow: '0 0 40px rgba(168,85,247,1), 0 0 80px rgba(168,85,247,0.8), 0 0 120px rgba(168,85,247,0.6), 0 0 160px rgba(168,85,247,0.4)'
+          }
+        }
+      },
+      animation: {
+        'shine': 'shine 3s infinite',
+        'gradient-glow': 'gradient 3s ease infinite, pulse-glow 3s ease-in-out infinite'
+      },
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
