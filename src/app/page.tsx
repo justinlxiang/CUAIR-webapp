@@ -41,7 +41,7 @@ export default function Home() {
         <div className="absolute inset-0 z-10 pointer-events-auto bg-transparent mt-8">
           <Orb 
             hue={0}
-            hoverIntensity={0.3}
+            hoverIntensity={0.5}
             rotateOnHover={true}
             forceHoverState={false}
           />
