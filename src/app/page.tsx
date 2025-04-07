@@ -34,7 +34,7 @@ export default function Home() {
         )}
         <main className="relative z-20 p-6 pointer-events-none">
           <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 via-pink-400 to-purple-500 bg-[length:300%_100%] animate-gradient-glow mb-4">The Nexis</h1>
+            <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 via-pink-400 to-purple-500 bg-[length:300%_100%] animate-gradient-glow mb-4">The Nexus</h1>
             <p className="text-foreground text-xl font-bold">Select a system to monitor and control</p>
           </div>
 
