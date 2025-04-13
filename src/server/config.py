@@ -9,6 +9,9 @@ MAPPING_SERVICE_URL = "http://127.0.0.1:8000"
 MAPPING_DIR = Path("mapping_images")
 MAPPING_METADATA_DIR = Path("mapping_metadata")
 
+PICAMPIC_DIR = Path("picam_images")
+PICAMVID_DIR = Path("picam_videos")
+
 # CORS settings
 CORS_ORIGINS = ["*"]  # In development, allow all origins
 CORS_CREDENTIALS = True

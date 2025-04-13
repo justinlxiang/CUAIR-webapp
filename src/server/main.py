@@ -9,7 +9,9 @@ from config import (
     CORS_METHODS, 
     CORS_HEADERS,
     MAPPING_DIR,
-    MAPPING_METADATA_DIR
+    MAPPING_METADATA_DIR,
+    PICAMPIC_DIR,
+    PICAMVID_DIR
 )
 
 # Initialize FastAPI app
@@ -27,9 +29,13 @@ app.add_middleware(
 # Create directories for storing mapping data
 MAPPING_DIR.mkdir(exist_ok=True)
 MAPPING_METADATA_DIR.mkdir(exist_ok=True)
+PICAMPIC_DIR.mkdir(exist_ok=True)
+PICAMVID_DIR.mkdir(exist_ok=True)
 
 # Mount the mapping_images directory to serve files
 app.mount("/mapping_images", StaticFiles(directory=str(MAPPING_DIR)), name="mapping_images")
+app.mount("/picam_images", StaticFiles(directory=str(PICAMPIC_DIR)), name="picam_images")
+app.mount("/picam_videos", StaticFiles(directory=str(PICAMVID_DIR)), name="picam_videos")
 
 # Include routers
 app.include_router(lidar.router, tags=["lidar"])
