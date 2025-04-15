@@ -19,7 +19,7 @@ export default function Home() {
 
   const checkStreamStatus = useCallback(async () => {
     try {
-      const response = await fetch('http://10.48.61.73:8888/stream/status');
+      const response = await fetch('http://localhost:8888/stream/status');
       if (response.ok) {
         const status = await response.json();
         setIsStreamActive(status.isStreaming);
@@ -32,7 +32,7 @@ export default function Home() {
   const toggleStream = async () => {
     try {
       const endpoint = isStreamActive ? 'stop' : 'start';
-      const response = await fetch(`http://10.48.61.73:8888/stream/${endpoint}`, {
+      const response = await fetch(`http://localhost:8888/stream/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

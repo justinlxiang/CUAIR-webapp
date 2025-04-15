@@ -30,6 +30,8 @@ export default function Header() {
     { name: 'Warning System', href: '/warning-system' },
     { name: 'Mapping', href: '/mapping' },
     { name: 'System Monitor', href: '/system' },
+    { name: 'Video Stream', href: '/video-stream' },
+    { name: 'Chat', href: '/chat' },
   ];
 
   const isActivePath = (path: string) => {

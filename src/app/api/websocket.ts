@@ -58,7 +58,7 @@ export class WebSocketClient {
             return;
         }
 
-        this.ws = new WebSocket(`ws://10.48.61.73:8888${this.endpoint}`);
+        this.ws = new WebSocket(`ws://localhost:8888${this.endpoint}`);
 
         this.ws.onopen = () => {
             console.log(`WebSocket connected to ${this.endpoint}`);

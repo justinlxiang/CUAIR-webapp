@@ -42,7 +42,7 @@ export default function Home() {
 
   const checkLidarStatus = useCallback(async () => {
     try {
-      const response = await fetch('http://10.48.61.73:8888/lidar/status');
+      const response = await fetch('http://localhost:8888/lidar/status');
       if (response.ok) {
         const status = await response.json();
         setIsLidarActive(status.isRunning);
@@ -55,7 +55,7 @@ export default function Home() {
   const toggleLidar = useCallback(async () => {
     try {
       const endpoint = isLidarActive ? 'stop' : 'start';
-      const response = await fetch(`http://10.48.61.73:8888/lidar/${endpoint}`, {
+      const response = await fetch(`http://localhost:8888/lidar/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

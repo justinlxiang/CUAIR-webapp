@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from routers import lidar, mapping, detection
+from routers import lidar, mapping, detection, chatbot
 from config import (
     CORS_ORIGINS, 
     CORS_CREDENTIALS, 
@@ -41,6 +41,7 @@ app.mount("/picam_videos", StaticFiles(directory=str(PICAMVID_DIR)), name="picam
 app.include_router(lidar.router, tags=["lidar"])
 app.include_router(mapping.router, tags=["mapping"])
 app.include_router(detection.router, tags=["detection"])
+app.include_router(chatbot.router, tags=["chatbot"])
 
 @app.get("/")
 async def root():
