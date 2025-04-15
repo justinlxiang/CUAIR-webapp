@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Trash2 } from 'lucide-react';
+import { Mic, MicOff, Trash2, RefreshCw } from 'lucide-react';
 import Header from '../components/Header';
 
 // Add type definitions for Web Speech API
@@ -263,6 +263,24 @@ export default function ChatPage() {
     }
   };
 
+  const clearContext = async () => {
+    try {
+      await fetch('http://localhost:8888/clear-context', {
+        method: 'POST',
+      });
+      
+      // Add a separator message to indicate context was cleared
+      const separatorMessage: Message = {
+        role: 'assistant',
+        content: '--- Context cleared ---'
+      };
+      
+      setMessages(prev => [...prev, separatorMessage]);
+    } catch (error) {
+      console.error('Error clearing context:', error);
+    }
+  };
+
   const cancelStreaming = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -278,14 +296,24 @@ export default function ChatPage() {
       <div className="container mx-auto p-4 max-w-4xl h-[calc(100vh-80px)] flex flex-col">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Nexus AI</h1>
-          <Button 
-            onClick={clearChatHistory} 
-            variant="outline" 
-            className="flex items-center gap-2"
-          >
-            <Trash2 className="w-4 h-4" />
-            Clear History
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={clearContext} 
+              variant="outline" 
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Clear Context
+            </Button>
+            <Button 
+              onClick={clearChatHistory} 
+              variant="outline" 
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clear History
+            </Button>
+          </div>
         </div>
         
         <div className="bg-gray-100 rounded-lg p-4 flex-grow overflow-y-auto mb-4">
@@ -295,7 +323,9 @@ export default function ChatPage() {
               className={`p-3 rounded-lg mb-2 ${
                 message.role === 'user' 
                   ? 'bg-blue-200 text-blue-900 ml-auto max-w-[80%]' 
-                  : 'bg-white text-black max-w-[80%]'
+                  : message.content === '--- Context cleared ---'
+                    ? 'bg-gray-300 text-gray-700 text-center w-full'
+                    : 'bg-white text-black max-w-[80%]'
               }`}
             >
               <span className="font-bold">{message.role === 'user' ? 'You: ' : 'AI: '}</span>

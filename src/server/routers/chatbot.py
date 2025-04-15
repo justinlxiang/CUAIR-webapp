@@ -28,11 +28,14 @@ class MessagesResponse(BaseModel):
     messages: List[Message]
 
 # Store chat history in memory (in a real app, you'd use a database)
-chat_histories: Dict[str, List[Message]] = {}
-# Default user ID for single-user applications
-DEFAULT_USER_ID = "default_user"
+global chat_history
+chat_history: List[Message] = []
 
-# Demo tool function
+# Track the context marker (index in chat_history where context starts)
+global context_marker
+context_marker = 0
+
+# Demo tool functions
 def start_lidar():
     """Start the LIDAR system"""
     print("TURNING ON LIDAR")
@@ -97,142 +100,171 @@ For example:
 # Model name
 MODEL_NAME = "llama3.2:3b"
 
+def prepare_messages(request, system_prompt):
+    """Prepare messages for the model with system prompt"""
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    # Add user messages
+    for msg in request["messages"]:
+        messages.append({"role": msg.role, "content": msg.content})
+    
+    return messages
+
+def get_available_tools():
+    """Return the list of available tools with their schemas"""
+    return [
+        {
+            "name": "start_lidar",
+            "description": "Start the LIDAR system",
+            "input_schema": {}
+        },
+        {
+            "name": "stop_lidar",
+            "description": "Stop the LIDAR system",
+            "input_schema": {}
+        },
+        {
+            "name": "start_video_stream",
+            "description": "Start the video stream from the aircraft camera",
+            "input_schema": {}
+        },
+        {
+            "name": "stop_video_stream",
+            "description": "Stop the video stream from the aircraft camera",
+            "input_schema": {}
+        }
+    ]
+
+def execute_tool(tool_name: str):
+    """Execute the appropriate tool based on the name"""
+    if tool_name == "start_lidar":
+        return start_lidar()
+    elif tool_name == "stop_lidar":
+        return stop_lidar()
+    elif tool_name == "start_video_stream":
+        return start_video_stream()
+    elif tool_name == "stop_video_stream":
+        return stop_video_stream()
+    else:
+        print(f"Unknown tool: {tool_name}")
+        return f"Unknown tool requested: {tool_name}"
+
+async def check_tool_decision(tool_decision_messages):
+    """Check if a tool is needed and execute it if necessary"""
+    tool_needed = False
+    tool_result = None
+    
+    try:
+        # Create an Ollama client
+        client = AsyncClient()
+        
+        # Make the tool decision request
+        response = await client.chat(
+            model=MODEL_NAME,
+            messages=tool_decision_messages
+        )
+        
+        # Check if the model wants to use a tool
+        tool_decision = response.message.content.strip().upper()
+        tool_needed = tool_decision == "YES"
+        print(f"Tool decision: {tool_decision}, Tool needed: {tool_needed}")
+        
+        # If tool is needed, execute it
+        if tool_needed:
+            # Make a tool call with the specified format
+            tool_call_response = await client.chat(
+                model=MODEL_NAME,
+                messages=tool_decision_messages,
+                tools=get_available_tools()
+            )
+            
+            # Check if there's a tool call in the response
+            print(tool_call_response)
+            if hasattr(tool_call_response, 'message') and hasattr(tool_call_response.message, 'tool_calls') and tool_call_response.message.tool_calls:
+                # Extract the tool call information
+                tool_call = tool_call_response.message.tool_calls[0]
+                tool_name = tool_call.function.name
+                
+                print(f"Tool call detected: {tool_name}")
+                tool_result = execute_tool(tool_name)
+            else:
+                print("No tool calls found in the response")
+    except Exception as e:
+        print(f"Error checking for tool calls: {str(e)}")
+        
+    return tool_needed, tool_result
+
+async def stream_response(messages):
+    """Stream the response from Ollama"""
+    full_response = ""
+    client = AsyncClient()
+    
+    try:
+        # Get the streaming response
+        stream = await client.chat(
+            model=MODEL_NAME,
+            messages=messages,
+            stream=True
+        )
+        
+        # Process the streaming response
+        async for chunk in stream:
+            if hasattr(chunk, 'message') and hasattr(chunk.message, 'content'):
+                content_chunk = chunk.message.content
+                full_response += content_chunk
+                yield content_chunk, False
+    except Exception as e:
+        error_detail = f"Error streaming from Ollama: {str(e)}"
+        print(error_detail)
+        yield error_detail, True
+
+def update_chat_history(request_messages, assistant_message):
+    """Update the chat history for a user"""
+    global chat_history
+    
+    # Add the user's messages
+    chat_history.extend(request_messages)
+    
+    # Add the assistant's message
+    chat_history.append(assistant_message)
+
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     """Stream the chatbot response"""
     try:
-        # Prepare the request to Ollama with streaming enabled and system context
-        messages = [{"role": "system", "content": SYSTEM_CONTEXT}]
-        messages.extend([{"role": msg.role, "content": msg.content} for msg in request.messages])
-
-        # Create a dedicated tool decision request
-        tool_decision_messages = [{"role": "system", "content": TOOL_DECISION_PROMPT}]
-        tool_decision_messages.extend([{"role": msg.role, "content": msg.content} for msg in request.messages])
+        # Get the context messages (only messages after the context marker)
+        context_messages = chat_history[context_marker:] if context_marker < len(chat_history) else []
+        
+        # Add the new user message to the context
+        context_messages.append(request.messages[-1])
+        
+        # Prepare the messages with system context
+        messages = prepare_messages({"messages": context_messages}, SYSTEM_CONTEXT)
+        tool_decision_messages = prepare_messages({"messages": context_messages}, TOOL_DECISION_PROMPT)
         
         async def generate():
-            # Store the conversation in chat_histories
-            if DEFAULT_USER_ID not in chat_histories:
-                chat_histories[DEFAULT_USER_ID] = []
-            
-            # Add the user's last message
-            chat_histories[DEFAULT_USER_ID] = request.messages
-            
             # Create a new message for the assistant
             assistant_message = Message(role="assistant", content="")
-            chat_histories[DEFAULT_USER_ID].append(assistant_message)
+            
+            # Update chat history with the full request messages
+            update_chat_history(request.messages, assistant_message)
             
             # Start the tool decision process in the background
-            tool_needed = False
-            tool_result = None
+            tool_decision_task = asyncio.create_task(check_tool_decision(tool_decision_messages))
             
-            async def check_tool_decision():
-                nonlocal tool_needed, tool_result
-                try:
-                    # Create an Ollama client
-                    client = AsyncClient()
-                    
-                    # Make the tool decision request
-                    response = await client.chat(
-                        model=MODEL_NAME,
-                        messages=tool_decision_messages
-                    )
-                    
-                    # Check if the model wants to use a tool
-                    tool_decision = response.message.content.strip().upper()
-                    tool_needed = tool_decision == "YES"
-                    print(f"Tool decision: {tool_decision}, Tool needed: {tool_needed}")
-                    
-                    # If tool is needed, execute it
-                    if tool_needed:
-                        # Make a tool call with the specified format
-                        tool_call_response = await client.chat(
-                            model=MODEL_NAME,
-                            messages=messages,
-                            tools=[
-                                {
-                                    "name": "start_lidar",
-                                    "description": "Start the LIDAR system",
-                                    "input_schema": {}
-                                },
-                                {
-                                    "name": "stop_lidar",
-                                    "description": "Stop the LIDAR system",
-                                    "input_schema": {}
-                                },
-                                {
-                                    "name": "start_video_stream",
-                                    "description": "Start the video stream from the aircraft camera",
-                                    "input_schema": {}
-                                },
-                                {
-                                    "name": "stop_video_stream",
-                                    "description": "Stop the video stream from the aircraft camera",
-                                    "input_schema": {}
-                                }
-                            ]
-                        )
-                        
-                        # Check if there's a tool call in the response
-                        print(tool_call_response)
-                        if hasattr(tool_call_response, 'message') and hasattr(tool_call_response.message, 'tool_calls') and tool_call_response.message.tool_calls:
-                            # Extract the tool call information
-                            tool_call = tool_call_response.message.tool_calls[0]
-                            tool_name = tool_call.function.name
-                            
-                            print(f"Tool call detected: {tool_name}")
-                            
-                            # Execute the appropriate tool based on the name
-                            if tool_name == "start_lidar":
-                                tool_result = start_lidar()
-                            elif tool_name == "stop_lidar":
-                                tool_result = stop_lidar()
-                            elif tool_name == "start_video_stream":
-                                tool_result = start_video_stream()
-                            elif tool_name == "stop_video_stream":
-                                tool_result = stop_video_stream()
-                            else:
-                                tool_result = f"Unknown tool requested: {tool_name}"
-                                print(f"Unknown tool: {tool_name}")
-                        else:
-                            print("No tool calls found in the response")
-                except Exception as e:
-                    print(f"Error checking for tool calls: {str(e)}")
-            
-            # Start the tool decision process in the background
-            tool_decision_task = asyncio.create_task(check_tool_decision())
-            
-            # Create an Ollama client for streaming
-            client = AsyncClient()
-            
-            # Stream the response from Ollama
+            # Stream the response
             full_response = ""
-            try:
-                # Get the streaming response
-                stream = await client.chat(
-                    model=MODEL_NAME,
-                    messages=messages,
-                    stream=True
-                )
+            async for content_chunk, is_error in stream_response(messages):
+                if is_error:
+                    yield f"data: {json.dumps({'error': content_chunk})}\n\n"
+                    return
                 
-                # Process the streaming response
-                async for chunk in stream:
-                    if hasattr(chunk, 'message') and hasattr(chunk.message, 'content'):
-                        content_chunk = chunk.message.content
-                        full_response += content_chunk
-                        
-                        # Update the assistant message in chat_histories
-                        assistant_message.content = full_response
-                        
-                        # Send the chunk to the client
-                        yield f"data: {json.dumps({'chunk': content_chunk, 'done': False})}\n\n"
-            except Exception as e:
-                error_detail = f"Error streaming from Ollama: {str(e)}"
-                print(error_detail)
-                yield f"data: {json.dumps({'error': error_detail})}\n\n"
-                return
+                full_response += content_chunk
+                assistant_message.content = full_response
+                yield f"data: {json.dumps({'chunk': content_chunk, 'done': False})}\n\n"
             
             # Wait for the tool decision process to complete
-            await tool_decision_task
+            tool_needed, tool_result = await tool_decision_task
             
             # If a tool was needed and executed, append the result to the response
             if tool_needed and tool_result:
@@ -254,13 +286,21 @@ async def chat_stream(request: ChatRequest):
 @router.get("/messages", response_model=MessagesResponse)
 async def get_messages():
     """Retrieve all messages for the default user"""
-    if DEFAULT_USER_ID not in chat_histories:
-        chat_histories[DEFAULT_USER_ID] = []
     
-    return MessagesResponse(messages=chat_histories[DEFAULT_USER_ID])
+    return MessagesResponse(messages=chat_history)
 
 @router.post("/clear")
 async def clear_history():
     """Clear chat history for the default user"""
-    chat_histories[DEFAULT_USER_ID] = []
+    chat_history = []
+    context_marker = 0
     return {"status": "success", "message": "Chat history cleared"}
+
+@router.post("/clear-context")
+async def clear_context():
+    """Clear the context for the chatbot while preserving message history"""
+    global context_marker
+    # Set the context marker to the current length of chat history
+    # This means all future messages will be treated as new context
+    context_marker = len(chat_history)
+    return {"status": "success", "message": "Context cleared"}
