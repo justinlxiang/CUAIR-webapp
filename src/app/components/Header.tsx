@@ -50,6 +50,13 @@ export default function Header() {
           height={40}
           className="object-contain"
         />
+        <Image
+          src="/images/Nexus.png"
+          alt="Nexus Logo"
+          width={40}
+          height={40}
+          className="object-contain"
+        />
         <NavigationMenu>
           <NavigationMenuList className="gap-3">
             {navigationItems.map((item) => (
