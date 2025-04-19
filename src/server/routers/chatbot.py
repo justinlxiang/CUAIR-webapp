@@ -77,7 +77,7 @@ You have access to the following tools:
 - stop_video_stream: Stops the video stream from the aircraft camera.
 - get_altitude: Gets the altitude of the aircraft. Don't return any numbers as a tool is already being used.
 
-If a user explicitly asks you to use a tool, another request is handling it, so respond that the tool is being handled. Be concise.
+If a user explicitly asks you to use one of the tool listed above, respond that the tool is being handled. Be concise.
 If a user asks what tools are available, make sure to list all of them.
 IMPORTANT: When a tool is being used, DO NOT include the tool result in your response. The system will automatically append the tool result to your response.
 Also don't list the available tools unless the user asks for them."""
@@ -103,7 +103,7 @@ For example:
 - If the user asks "stop the lidar" or "turn off the lidar", respond with "YES"
 - If the user asks "start the video stream" or "turn on the camera", respond with "YES"
 - If the user asks "stop the video stream" or "turn off the camera", respond with "YES"
-- If the user asks "what is the altitude" or "what is the current altitude", respond with "YES"
+- If the user asks "give me the altitude" or "what's the current altitude", respond with "YES"
 - If the user asks "what is the weather" or "tell me about CUAir", respond with "NO"
 """
 
@@ -309,6 +309,8 @@ async def get_messages():
 @router.post("/clear")
 async def clear_history():
     """Clear chat history for the default user"""
+    global chat_history
+    global context_marker
     chat_history = []
     context_marker = 0
     return {"status": "success", "message": "Chat history cleared"}

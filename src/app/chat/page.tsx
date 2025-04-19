@@ -5,6 +5,7 @@ import { Mic, MicOff, Trash2, RefreshCw } from 'lucide-react';
 import Header from '../components/Header';
 import { useSharedChat } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
 
 // Add type definitions for Web Speech API
 declare global {
@@ -61,12 +62,27 @@ export default function ChatPage() {
     messagesEndRef
   } = useSharedChat();
 
+  // Add useEffect for auto-scrolling
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const clearChatHistory = async () => {
     try {
-      await fetch('http://localhost:8888/clear', {
+      const response = await fetch('http://localhost:8888/clear', {
         method: 'POST',
       });
-      setMessages([]);
+      if (!response.ok) {
+        throw new Error('Failed to clear chat history');
+      }
+      setMessages([]); // Clear the messages in the frontend state
+      
+      // Force a reload of the messages from the server
+      const messagesResponse = await fetch('http://localhost:8888/messages');
+      if (messagesResponse.ok) {
+        const data = await messagesResponse.json();
+        setMessages(data.messages);
+      }
     } catch (error) {
       console.error('Error clearing chat history:', error);
     }

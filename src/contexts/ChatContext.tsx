@@ -23,6 +23,44 @@ interface ChatContextType {
   cancelStreaming: () => void;
 }
 
+// Add type definitions for Web Speech API
+declare global {
+  interface Window {
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  start(): void;
+  stop(): void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onend: () => void;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
@@ -34,6 +72,35 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const abortController = useRef<AbortController | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const isListeningRef = useRef(false);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = true;
+
+      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
+        if (isListeningRef.current) {
+          const transcript = Array.from(event.results)
+            .map((result) => result[0])
+            .map((result) => result.transcript)
+            .join('');
+
+          setInputText(transcript);
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+        isListeningRef.current = false;
+        setTimeout(() => inputRef.current?.focus(), 0);
+      };
+    }
+  }, []);
 
   // Load chat history when the component mounts
   useEffect(() => {
@@ -42,13 +109,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch('http://localhost:8888/messages');
         if (!response.ok) throw new Error('Failed to load chat history');
         const data = await response.json();
-        setMessages(data.messages);
+        setMessages(data.messages || []);
       } catch (error) {
         console.error('Error loading chat history:', error);
+        setMessages([]);
       }
     };
 
     loadChatHistory();
+
+    return () => {
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,12 +139,43 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      console.error('Speech recognition is not supported in your browser.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      isListeningRef.current = false;
+      setTimeout(() => inputRef.current?.focus(), 0);
+    } else {
+      setInputText('');
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+        isListeningRef.current = true;
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        setIsListening(false);
+        isListeningRef.current = false;
+      }
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
 
+    // Stop speech recognition if it's active
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      isListeningRef.current = false;
+    }
+
     const userMessage = { role: 'user' as const, content: inputText.trim() };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setMessages(prevMessages => [...prevMessages, userMessage]);
     setInputText('');
     setIsLoading(true);
 
@@ -76,7 +184,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch('http://localhost:8888/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: updatedMessages }),
+        body: JSON.stringify({ messages: [userMessage] }),
         signal: abortController.current.signal,
       });
 
@@ -88,12 +196,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const assistantMessage = { role: 'assistant' as const, content: '' };
       setIsStreaming(true);
 
+      // Add empty assistant message to start
+      setMessages(prevMessages => [...prevMessages, assistantMessage]);
+
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         
         const chunk = decoder.decode(value);
-        // Split the chunk into lines and process each SSE event
         const lines = chunk.split('\n');
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -104,7 +214,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               }
               if (data.chunk) {
                 assistantMessage.content += data.chunk;
-                setMessages([...updatedMessages, { ...assistantMessage }]);
+                // Update the last message (which is the assistant's message)
+                setMessages(prevMessages => {
+                  const newMessages = [...prevMessages];
+                  newMessages[newMessages.length - 1] = { ...assistantMessage };
+                  return newMessages;
+                });
               }
               if (data.done) {
                 break;
@@ -120,47 +235,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         console.log('Stream cancelled');
       } else {
         console.error('Error:', error);
-        setMessages([...updatedMessages, { role: 'assistant', content: 'Sorry, there was an error processing your request.' }]);
+        setMessages(prevMessages => [...prevMessages, { role: 'assistant', content: 'Sorry, there was an error processing your request.' }]);
       }
     } finally {
       setIsLoading(false);
       setIsStreaming(false);
       abortController.current = null;
     }
-  };
-
-  const toggleListening = () => {
-    if (!isListening) {
-      startListening();
-    } else {
-      stopListening();
-    }
-  };
-
-  const startListening = () => {
-    if ('webkitSpeechRecognition' in window) {
-      const recognition = new window.webkitSpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0].transcript)
-          .join('');
-        setInputText(transcript);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
-      setIsListening(true);
-    }
-  };
-
-  const stopListening = () => {
-    setIsListening(false);
   };
 
   const cancelStreaming = () => {

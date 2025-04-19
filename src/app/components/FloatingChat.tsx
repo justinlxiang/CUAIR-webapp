@@ -25,10 +25,15 @@ export default function FloatingChat() {
 
   // Scroll to bottom when chat opens or messages change
   useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Scroll to bottom when chat opens
+  useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [isOpen, messages]);
+  }, [isOpen]);
 
   const toggleChat = () => setIsOpen(!isOpen);
 
