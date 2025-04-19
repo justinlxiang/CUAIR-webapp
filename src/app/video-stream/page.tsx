@@ -90,7 +90,7 @@ export default function Home() {
             </Button>
           </div>
           
-          <div className="mt-8 flex flex-col gap-4">
+          <div className="flex flex-col gap-4">
             <Card className={`bg-card border-border p-4 ${styles.card}`}>
               <h2 className="text-xl font-bold text-card-foreground mb-4">Detection Frame Feed</h2>
               <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
