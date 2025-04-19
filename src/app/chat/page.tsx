@@ -5,7 +5,7 @@ import { Mic, MicOff, Trash2, RefreshCw } from 'lucide-react';
 import Header from '../components/Header';
 import { useSharedChat } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Add type definitions for Web Speech API
 declare global {
@@ -46,6 +46,7 @@ interface SpeechRecognitionAlternative {
 }
 
 export default function ChatPage() {
+  const chatPageEndRef = useRef<HTMLDivElement>(null);
   const {
     messages,
     setMessages,
@@ -58,13 +59,12 @@ export default function ChatPage() {
     handleSendMessage,
     toggleListening,
     cancelStreaming,
-    inputRef,
-    messagesEndRef
+    inputRef
   } = useSharedChat();
 
   // Add useEffect for auto-scrolling
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatPageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const clearChatHistory = async () => {
@@ -153,12 +153,12 @@ export default function ChatPage() {
             </div>
           ))}
           {isLoading && !isStreaming && (
-            <div className="bg-primary text-primary-foreground p-3 rounded-lg mb-2 max-w-[80%]">
+            <div className="bg-white dark:bg-black text-gray-900 dark:text-white p-3 rounded-lg mb-2 max-w-[80%] border border-border">
               <span className="font-bold">Nexus AI: </span>
-              <span className="animate-pulse">Thinking...</span>
+              <span>Thinking...</span>
             </div>
           )}
-          <div ref={messagesEndRef} />
+          <div ref={chatPageEndRef} />
         </div>
 
         <div className="flex gap-2">

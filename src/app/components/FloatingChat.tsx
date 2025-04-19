@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { MessageCircle, X, Mic, MicOff, Send } from 'lucide-react';
 import { useSharedChat } from '@/contexts/ChatContext';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
+  const floatingChatEndRef = useRef<HTMLDivElement>(null);
   const {
     messages,
     inputText,
@@ -19,19 +20,18 @@ export default function FloatingChat() {
     handleSendMessage,
     toggleListening,
     cancelStreaming,
-    inputRef,
-    messagesEndRef
+    inputRef
   } = useSharedChat();
 
   // Scroll to bottom when chat opens or messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    floatingChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   // Scroll to bottom when chat opens
   useEffect(() => {
     if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      floatingChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [isOpen]);
 
@@ -82,12 +82,12 @@ export default function FloatingChat() {
             </div>
           ))}
           {isLoading && !isStreaming && (
-            <div className="bg-primary text-primary-foreground p-3 rounded-lg mb-2 max-w-[80%]">
+            <div className="bg-white dark:bg-black text-gray-900 dark:text-white p-3 rounded-lg mb-2 max-w-[80%] border border-border">
               <span className="font-bold">Nexus AI: </span>
-              <span className="animate-pulse">Thinking...</span>
+              <span>Thinking...</span>
             </div>
           )}
-          <div ref={messagesEndRef} />
+          <div ref={floatingChatEndRef} />
         </div>
 
         <div className="p-4 border-t flex gap-2">
