@@ -77,17 +77,23 @@ async def detection_websocket_endpoint(websocket: WebSocket):
 @router.post("/stream/start")
 async def start_camera():
     print("Forwarding start request to camera service")
-    response = requests.post(f"{CAMERA_SERVICE_URL}/start", json={"name": "start"})
+    response = requests.post(f"{CAMERA_SERVICE_URL}/start", json={"name": "start"}, timeout=3)
     return response.json()
 
 @router.post("/stream/stop")
 async def stop_camera():
     print("Forwarding stop request to camera service")
-    response = requests.post(f"{CAMERA_SERVICE_URL}/stop", json={"name": "stop"})
+    response = requests.post(f"{CAMERA_SERVICE_URL}/stop", json={"name": "stop"}, timeout=3)
     return response.json()
 
 @router.get("/stream/status")
 async def get_camera_status():
     print("Checking camera service status")
-    response = requests.get(f"{CAMERA_SERVICE_URL}/status")
-    return response.json() 
+    try:
+        response = requests.get(f"{CAMERA_SERVICE_URL}/status", timeout=3)
+        return response.json()
+    except requests.exceptions.Timeout:
+        return {"isRunning": False, "error": "Request timed out"}
+    except Exception as e:
+        logger.error(f"Error checking camera status: {str(e)}")
+        return {"isRunning": False, "error": str(e)}

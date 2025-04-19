@@ -132,7 +132,7 @@ async def delete_mapping_image(image_id: str):
         if metadata_path.exists():
             metadata_path.unlink()
 
-        response = requests.delete(f"{MAPPING_SERVICE_URL}", json={"image_id": image_id})
+        response = requests.delete(f"{MAPPING_SERVICE_URL}", json={"image_id": image_id}, timeout=3)
         return response.json()
     except Exception as e:
         print(f"Error deleting mapping image: {e}")
@@ -141,17 +141,17 @@ async def delete_mapping_image(image_id: str):
 @router.post("/mapping/start")
 async def start_mapping():
     print("Forwarding start request to mapping service")
-    response = requests.post(f"{MAPPING_SERVICE_URL}/start", json={"command": "start"})
+    response = requests.post(f"{MAPPING_SERVICE_URL}/start", json={"command": "start"}, timeout=3)
     return response.json()
 
 @router.post("/mapping/stop")
 async def stop_mapping():
     print("Forwarding stop request to mapping service")
-    response = requests.post(f"{MAPPING_SERVICE_URL}/stop", json={"command": "stop"}) 
+    response = requests.post(f"{MAPPING_SERVICE_URL}/stop", json={"command": "stop"}, timeout=3) 
     return response.json()
 
 @router.post("/mapping/generate")
 async def generate_mapping():
     print("Forwarding generate request to mapping service")
-    response = requests.post(f"{MAPPING_SERVICE_URL}/generate", json={"command": "generate"})
+    response = requests.post(f"{MAPPING_SERVICE_URL}/generate", json={"command": "generate"}, timeout=3)
     return response.json() 

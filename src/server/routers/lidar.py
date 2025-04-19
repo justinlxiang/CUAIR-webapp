@@ -86,20 +86,20 @@ async def receive_lidar_data(data: dict):
 @router.post("/lidar/start")
 async def start_lidar():
     print("Forwarding start request to LiDAR service")
-    response = requests.post(f"{LIDAR_SERVICE_URL}/start", json={"name": "start"})
+    response = requests.post(f"{LIDAR_SERVICE_URL}/start", json={"name": "start"}, timeout=3)
     return response.json()
 
 @router.post("/lidar/stop")
 async def stop_lidar():
     print("Forwarding stop request to LiDAR service")
-    response = requests.post(f"{LIDAR_SERVICE_URL}/stop", json={"name": "stop"}) 
+    response = requests.post(f"{LIDAR_SERVICE_URL}/stop", json={"name": "stop"}, timeout=3) 
     return response.json()
 
 @router.get("/lidar/status")
 async def get_status():
     print("Checking LiDAR service status")
     try:
-        response = requests.get(f"{LIDAR_SERVICE_URL}/status", timeout=1)
+        response = requests.get(f"{LIDAR_SERVICE_URL}/status", timeout=3)
         return response.json()
     except requests.exceptions.Timeout:
         return {"isRunning": False, "error": "Request timed out"}

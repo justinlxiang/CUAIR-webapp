@@ -75,7 +75,7 @@ You have access to the following tools:
 - stop_lidar: Deactivates the LIDAR system on the aircraft.
 - start_video_stream: Starts the video stream from the aircraft camera.
 - stop_video_stream: Stops the video stream from the aircraft camera.
-- get_altitude: Gets the altitude of the aircraft.
+- get_altitude: Gets the altitude of the aircraft. Don't return any numbers as a tool is already being used.
 
 If a user explicitly asks you to use a tool, another request is handling it, so respond that the tool is being handled. Be concise.
 If a user asks what tools are available, make sure to list all of them.
@@ -91,6 +91,7 @@ Available tools:
 - stop_lidar: Deactivates the LIDAR system on the aircraft.
 - start_video_stream: Starts the video stream from the aircraft camera.
 - stop_video_stream: Stops the video stream from the aircraft camera.
+- get_altitude: Gets the altitude of the aircraft.
 
 Respond with ONLY "YES" if the user's request requires using any of the available tools, or "NO" if no tool is needed.
 Do not provide any explanation, just "YES" or "NO". 
@@ -102,6 +103,7 @@ For example:
 - If the user asks "stop the lidar" or "turn off the lidar", respond with "YES"
 - If the user asks "start the video stream" or "turn on the camera", respond with "YES"
 - If the user asks "stop the video stream" or "turn off the camera", respond with "YES"
+- If the user asks "what is the altitude" or "what is the current altitude", respond with "YES"
 - If the user asks "what is the weather" or "tell me about CUAir", respond with "NO"
 """
 
