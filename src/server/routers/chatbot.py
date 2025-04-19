@@ -7,6 +7,7 @@ import asyncio
 import logging
 from typing import List, Dict, Optional
 from ollama import AsyncClient
+import random
 
 # Disable httpx logging
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -56,6 +57,12 @@ def stop_video_stream():
     print("STOPPING VIDEO STREAM")
     return "Tool call successful: Video stream stopped successfully"
 
+def get_altitude():
+    """Get the altitude of the aircraft"""
+    print("GETTING ALTITUDE")
+    altitude = random.randint(0, 50)
+    return f"Tool call successful: The altitude of the aircraft is {altitude} meters"
+
 # System context for Nexus
 SYSTEM_CONTEXT = """You are Nexus AI, an AI agent for CUAir - a student project team at Cornell University developing autonomous aircraft. 
 You were created by the Intsys subteam, which focuses on computer vision, obstacle avoidance, mapping, and warning systems.
@@ -68,6 +75,7 @@ You have access to the following tools:
 - stop_lidar: Deactivates the LIDAR system on the aircraft.
 - start_video_stream: Starts the video stream from the aircraft camera.
 - stop_video_stream: Stops the video stream from the aircraft camera.
+- get_altitude: Gets the altitude of the aircraft.
 
 If a user explicitly asks you to use a tool, another request is handling it, so respond that the tool is being handled. Be concise.
 If a user asks what tools are available, make sure to list all of them.
@@ -132,6 +140,11 @@ def get_available_tools():
             "name": "stop_video_stream",
             "description": "Stop the video stream from the aircraft camera",
             "input_schema": {}
+        },
+        {
+            "name": "get_altitude",
+            "description": "Get the altitude of the aircraft",
+            "input_schema": {}
         }
     ]
 
@@ -145,6 +158,8 @@ def execute_tool(tool_name: str):
         return start_video_stream()
     elif tool_name == "stop_video_stream":
         return stop_video_stream()
+    elif tool_name == "get_altitude":
+        return get_altitude()
     else:
         print(f"Unknown tool: {tool_name}")
         return f"Unknown tool requested: {tool_name}"
