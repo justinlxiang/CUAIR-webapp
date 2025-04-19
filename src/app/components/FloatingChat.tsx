@@ -64,7 +64,7 @@ export default function FloatingChat() {
             <div 
               key={index} 
               className={cn(
-                "p-3 rounded-lg mb-2 border border-border",
+                "p-3 rounded-lg mb-2 border border-border break-words overflow-wrap-anywhere",
                 message.role === 'user' 
                   ? 'bg-blue-200 text-blue-900 ml-auto max-w-[80%]' 
                   : message.content === '--- Context cleared ---'
@@ -74,7 +74,7 @@ export default function FloatingChat() {
             >
               <span className="font-bold">{message.role === 'user' ? 'You: ' : 'Nexus AI: '}</span>
               <span className={cn(
-                "whitespace-pre-line",
+                "whitespace-pre-line break-words",
                 message.role === 'user' ? 'text-blue-900' : 'text-gray-900 dark:text-white'
               )}>
                 {message.content}
