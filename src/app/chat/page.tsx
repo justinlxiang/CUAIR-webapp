@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Trash2, RefreshCw } from 'lucide-react';
+import { Mic, MicOff, Trash2, RefreshCw, Send } from 'lucide-react';
 import Header from '../components/Header';
 import { useSharedChat } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
@@ -187,6 +187,7 @@ export default function ChatPage() {
             </Button>
           ) : (
             <Button onClick={handleSendMessage} disabled={isLoading}>
+              <Send className="h-4 w-4" />
               Send
             </Button>
           )}

@@ -64,7 +64,7 @@ export default function FloatingChat() {
             <div 
               key={index} 
               className={cn(
-                "p-3 rounded-lg mb-2 border border-border break-words overflow-wrap-anywhere",
+                "p-3 rounded-lg mb-2 border border-border break-words overflow-wrap-anywhere text-sm",
                 message.role === 'user' 
                   ? 'bg-blue-200 text-blue-900 ml-auto max-w-[80%]' 
                   : message.content === '--- Context cleared ---'
@@ -72,9 +72,9 @@ export default function FloatingChat() {
                     : 'bg-white dark:bg-black text-gray-900 dark:text-white max-w-[80%]'
               )}
             >
-              <span className="font-bold">{message.role === 'user' ? 'You: ' : 'Nexus AI: '}</span>
+              <span className="font-bold text-sm">{message.role === 'user' ? 'You: ' : 'Nexus AI: '}</span>
               <span className={cn(
-                "whitespace-pre-line break-words",
+                "whitespace-pre-line break-words text-sm",
                 message.role === 'user' ? 'text-blue-900' : 'text-gray-900 dark:text-white'
               )}>
                 {message.content}
@@ -82,7 +82,7 @@ export default function FloatingChat() {
             </div>
           ))}
           {isLoading && !isStreaming && (
-            <div className="bg-white dark:bg-black text-gray-900 dark:text-white p-3 rounded-lg mb-2 max-w-[80%] border border-border">
+            <div className="bg-white dark:bg-black text-gray-900 dark:text-white p-3 rounded-lg mb-2 max-w-[80%] border border-border text-sm">
               <span className="font-bold">Nexus AI: </span>
               <span>Thinking...</span>
             </div>
@@ -97,7 +97,7 @@ export default function FloatingChat() {
             value={inputText}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            className="flex-1 p-2 border rounded-lg bg-background"
+            className="flex-1 p-2 border rounded-lg bg-background text-sm"
             placeholder="Type or speak your message..."
             disabled={isLoading}
           />
