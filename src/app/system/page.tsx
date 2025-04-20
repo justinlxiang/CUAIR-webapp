@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import Header from '../components/Header';
 import { GET } from '@/lib/system-stats/route';
@@ -15,14 +15,11 @@ export default async function System() {
         <h1 className="text-3xl font-bold mb-6 text-foreground">System Monitoring</h1>
         
         <Card className="w-full max-w-md bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-card-foreground">System Information</CardTitle>
-          </CardHeader>
           <CardContent className="space-y-4">
             {stats ? (
               <>
                 <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-card-foreground">System Information</h3>
+                  <h3 className="text-lg font-semibold text-card-foreground mt-3">System Information</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                     <span>Hostname:</span>
                     <span>{stats.hostname}</span>

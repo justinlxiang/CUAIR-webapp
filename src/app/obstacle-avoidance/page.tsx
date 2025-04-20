@@ -135,7 +135,7 @@ export default function Home() {
       >
         <div>
           <div>ID: {cluster.id || 'Unknown'}</div>
-          <div>Movement: {cluster.movement?.toFixed(2)}</div>
+          <div>Meters/Second: {cluster.movement?.toFixed(2)}</div>
           <div>Moving Towards Lidar: {cluster.moving_towards_lidar ? 'Yes' : 'No'}</div>
         </div>
         <div>
