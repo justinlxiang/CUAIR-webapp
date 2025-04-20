@@ -74,6 +74,7 @@ export default function Home() {
   const handleLidarMessage = useCallback((message: WebSocketMessage) => {
     if (message.type === 'lidar') {
       setLidarData(message.data);
+      setIsLidarActive(true);
     }
   }, []);
 
