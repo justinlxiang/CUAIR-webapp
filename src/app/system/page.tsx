@@ -12,7 +12,7 @@ export default async function System() {
     <>
       <Header />
       <main className="min-h-screen bg-background flex flex-col items-center p-6">
-        <h1 className="text-3xl font-bold mb-6 text-foreground">System Monitoring</h1>
+        <h1 className="text-3xl font-bold mb-6 text-foreground">System Status</h1>
         
         <Card className="w-full max-w-md bg-card border-border">
           <CardContent className="space-y-4">

@@ -31,7 +31,7 @@ export default function Header() {
     { name: 'Nexus AI', href: '/chat' },
     { name: 'Warning System', href: '/warning-system' },
     { name: 'Mapping', href: '/mapping' },
-    { name: 'System Monitor', href: '/system' },
+    { name: 'System Status', href: '/system' },
   ];
 
   const isActivePath = (path: string) => {
