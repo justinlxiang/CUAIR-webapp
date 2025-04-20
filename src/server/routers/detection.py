@@ -75,25 +75,25 @@ async def detection_websocket_endpoint(websocket: WebSocket):
         await pi_detection_ws_manager.disconnect()
 
 @router.post("/stream/start")
-async def start_camera():
-    print("Forwarding start request to camera service")
+async def start_stream():
+    print("Forwarding start request to stream service")
     response = requests.post(f"{CAMERA_SERVICE_URL}/start", json={"name": "start"}, timeout=3)
     return response.json()
 
 @router.post("/stream/stop")
-async def stop_camera():
-    print("Forwarding stop request to camera service")
+async def stop_stream():
+    print("Forwarding stop request to stream service")
     response = requests.post(f"{CAMERA_SERVICE_URL}/stop", json={"name": "stop"}, timeout=3)
     return response.json()
 
 @router.get("/stream/status")
-async def get_camera_status():
-    print("Checking camera service status")
+async def get_stream_status():
+    print("Checking stream service status")
     try:
         response = requests.get(f"{CAMERA_SERVICE_URL}/status", timeout=3)
         return response.json()
     except requests.exceptions.Timeout:
         return {"isRunning": False, "error": "Request timed out"}
     except Exception as e:
-        logger.error(f"Error checking camera status: {str(e)}")
+        logger.error(f"Error checking stream status: {str(e)}")
         return {"isRunning": False, "error": str(e)}

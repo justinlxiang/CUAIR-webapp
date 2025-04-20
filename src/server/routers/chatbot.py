@@ -8,6 +8,8 @@ import logging
 from typing import List, Dict, Optional
 from ollama import AsyncClient
 import random
+from .lidar import start_lidar as start_lidar_tool, stop_lidar as stop_lidar_tool
+from .detection import start_stream as start_stream_tool, stop_stream as stop_stream_tool
 
 # Disable httpx logging
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -37,25 +39,42 @@ global context_marker
 context_marker = 0
 
 # Demo tool functions
-def start_lidar():
+async def start_lidar():
     """Start the LIDAR system"""
     print("TURNING ON LIDAR")
-    return "Tool call successful: LIDAR system activated successfully"
+    try:
+        response = await start_lidar_tool()
+        if response.get("status") == "success":
+            return "Tool call successful: LIDAR system activated successfully"
+    except Exception as e:
+        return f"Tool call failed: {str(e)}"
 
-def stop_lidar():
+async def stop_lidar():
     """Stop the LIDAR system"""
     print("TURNING OFF LIDAR")
-    return "Tool call successful: LIDAR system deactivated successfully"
-
-def start_video_stream():
+    response = await stop_lidar_tool()
+    if response.get("status") == "success":
+        return "Tool call successful: LIDAR system deactivated successfully"
+    else:
+        return f"Tool call failed: {response.get('error', 'Unknown error')}"
+    
+async def start_video_stream():
     """Start the video stream from the aircraft camera"""
     print("STARTING VIDEO STREAM")
-    return "Tool call successful: Video stream started successfully"
+    response = await start_stream_tool()
+    if response.get("status") == "success":
+        return "Tool call successful: Video stream started successfully"
+    else:
+        return f"Tool call failed: {response.get('error', 'Unknown error')}"
 
-def stop_video_stream():
+async def stop_video_stream():
     """Stop the video stream from the aircraft camera"""
     print("STOPPING VIDEO STREAM")
-    return "Tool call successful: Video stream stopped successfully"
+    response = await stop_stream_tool()
+    if response.get("status") == "success":
+        return "Tool call successful: Video stream stopped successfully"
+    else:
+        return f"Tool call failed: {response.get('error', 'Unknown error')}"
 
 def get_altitude():
     """Get the altitude of the aircraft"""
@@ -77,7 +96,7 @@ You have access to the following tools:
 - stop_video_stream: Stops the video stream from the aircraft camera.
 - get_altitude: Gets the altitude of the aircraft. Don't return any numbers as a tool is already being used.
 
-If a user explicitly asks you to use one of the tool listed above, respond that the tool is being handled. Be concise.
+If a user explicitly asks you to use one of the tool listed above, respond that the tool is going to be handled. Be concise.
 If a user asks what tools are available, make sure to list all of them.
 IMPORTANT: When a tool is being used, DO NOT include the tool result in your response. The system will automatically append the tool result to your response.
 Also don't list the available tools unless the user asks for them."""
@@ -150,16 +169,16 @@ def get_available_tools():
         }
     ]
 
-def execute_tool(tool_name: str):
+async def execute_tool(tool_name: str):
     """Execute the appropriate tool based on the name"""
     if tool_name == "start_lidar":
-        return start_lidar()
+        return await start_lidar()
     elif tool_name == "stop_lidar":
-        return stop_lidar()
+        return await stop_lidar()
     elif tool_name == "start_video_stream":
-        return start_video_stream()
+        return await start_video_stream()
     elif tool_name == "stop_video_stream":
-        return stop_video_stream()
+        return await stop_video_stream()
     elif tool_name == "get_altitude":
         return get_altitude()
     else:
@@ -203,7 +222,7 @@ async def check_tool_decision(tool_decision_messages):
                 tool_name = tool_call.function.name
                 
                 print(f"Tool call detected: {tool_name}")
-                tool_result = execute_tool(tool_name)
+                tool_result = await execute_tool(tool_name)
             else:
                 print("No tool calls found in the response")
     except Exception as e:
@@ -286,7 +305,7 @@ async def chat_stream(request: ChatRequest):
             # If a tool was needed and executed, append the result to the response
             if tool_needed and tool_result:
                 # Check if the tool result is already included in the model's response
-                if tool_result not in full_response:
+                if isinstance(tool_result, str) and tool_result not in full_response:
                     full_response += f"\n\n{tool_result}"
                     assistant_message.content = full_response
                     chunk_data = {'chunk': '\n\n' + tool_result, 'done': False}
