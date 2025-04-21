@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from routers import lidar, mapping, detection, chatbot
+from routers import lidar, mapping, detection, chatbot, warning_system
 from config import (
     CORS_ORIGINS, 
     CORS_CREDENTIALS, 
@@ -42,6 +42,7 @@ app.include_router(lidar.router, tags=["lidar"])
 app.include_router(mapping.router, tags=["mapping"])
 app.include_router(detection.router, tags=["detection"])
 app.include_router(chatbot.router, tags=["chatbot"])
+app.include_router(warning_system.router, tags=["warning_system"])
 
 @app.get("/")
 async def root():
