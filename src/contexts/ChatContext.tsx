@@ -14,6 +14,9 @@ interface ChatContextType {
   setIsListening: React.Dispatch<React.SetStateAction<boolean>>;
   isStreaming: boolean;
   setIsStreaming: React.Dispatch<React.SetStateAction<boolean>>;
+  voiceEnabled: boolean;
+  setVoiceEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleVoice: () => Promise<void>;
   inputRef: React.RefObject<HTMLInputElement | null>;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -69,6 +72,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const abortController = useRef<AbortController | null>(null);
@@ -126,6 +130,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         recognitionRef.current.stop();
       }
     };
+  }, []);
+
+  // Load voice settings when component mounts
+  useEffect(() => {
+    const loadVoiceSettings = async () => {
+      try {
+        const response = await fetch('http://localhost:8888/tts/settings');
+        if (!response.ok) throw new Error('Failed to load voice settings');
+        const data = await response.json();
+        setVoiceEnabled(data.enabled);
+      } catch (error) {
+        console.error('Error loading voice settings:', error);
+        setVoiceEnabled(true); // Default to enabled if error
+      }
+    };
+
+    loadVoiceSettings();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -252,6 +273,31 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const toggleVoice = async () => {
+    const newVoiceEnabled = !voiceEnabled;
+    setVoiceEnabled(newVoiceEnabled);
+    
+    try {
+      const response = await fetch('http://localhost:8888/tts/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          enabled: newVoiceEnabled,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update voice settings');
+      }
+    } catch (error) {
+      console.error('Error updating voice settings:', error);
+      // Revert state if update failed
+      setVoiceEnabled(!newVoiceEnabled);
+    }
+  };
+
   const value: ChatContextType = {
     messages,
     setMessages,
@@ -263,6 +309,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setIsListening,
     isStreaming,
     setIsStreaming,
+    voiceEnabled,
+    setVoiceEnabled,
+    toggleVoice,
     inputRef,
     messagesEndRef,
     handleInputChange,

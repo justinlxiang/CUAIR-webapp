@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { MessageCircle, X, Mic, MicOff, Send } from 'lucide-react';
+import { MessageCircle, X, Mic, MicOff, Send, Volume2, VolumeX } from 'lucide-react';
 import { useSharedChat } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +15,8 @@ export default function FloatingChat() {
     isLoading,
     isListening,
     isStreaming,
+    voiceEnabled,
+    toggleVoice,
     handleInputChange,
     handleKeyDown,
     handleSendMessage,
@@ -54,9 +56,18 @@ export default function FloatingChat() {
       >
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold">Nexus AI</h2>
-          <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant={voiceEnabled ? "default" : "secondary"}
+              size="icon"
+              onClick={toggleVoice}
+            >
+              {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-black">

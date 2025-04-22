@@ -8,13 +8,32 @@ import logging
 from typing import List, Dict, Optional
 from ollama import AsyncClient
 import random
+import pyttsx3
 from .lidar import start_lidar as start_lidar_tool, stop_lidar as stop_lidar_tool
 from .detection import start_stream as start_stream_tool, stop_stream as stop_stream_tool
+import time
+import signal
+import sys
+from pathlib import Path
+import importlib
+from queue import Queue
+from threading import Thread
+
 
 # Disable httpx logging
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 router = APIRouter()
+    
+class TTSSettings(BaseModel):
+    enabled: bool
+    voice_id: Optional[str] = None
+    rate: Optional[int] = 200
+    volume: Optional[float] = 1.0
+
+# Global TTS settings
+global tts_settings
+tts_settings = TTSSettings(enabled=True)
 
 # Define data models
 class Message(BaseModel):
@@ -90,14 +109,14 @@ assisting with tasks related to autonomous aircraft operations, mapping, obstacl
 running on which has pages to monitor and control systems on the aircraft.
 
 You have access to the following tools:
-- start_lidar: Activates the LIDAR system on the aircraft for obstacle detection and mapping.
-- stop_lidar: Deactivates the LIDAR system on the aircraft.
-- start_video_stream: Starts the video stream from the aircraft camera.
-- stop_video_stream: Stops the video stream from the aircraft camera.
-- get_altitude: Gets the altitude of the aircraft. Don't return any numbers as a tool is already being used.
+- start_lidar: Activates the LIDAR system on the aircraft for obstacle detection and mapping. Respond that you are activating the LIDAR system.
+- stop_lidar: Deactivates the LIDAR system on the aircraft. Respond that you are deactivating the LIDAR system.
+- start_video_stream: Starts the video stream from the aircraft camera. Respond that you are starting the video stream.
+- stop_video_stream: Stops the video stream from the aircraft camera. Respond that you are stopping the video stream.
+- get_altitude: Gets the altitude of the aircraft. Respond that you are fetching the altitude. Don't return any numbers as a tool is already being used.
 
-If a user explicitly asks you to use one of the tool listed above, respond that the tool is going to be handled. Be concise.
-If a user asks what tools are available, make sure to list all of them.
+If a user explicitly asks you to use one of the tool listed above, respond that the tool will be handled in future tense. Be concise.
+If a user asks what tools are available, make sure to list all of them including get_altitude.
 IMPORTANT: When a tool is being used, DO NOT include the tool result in your response. The system will automatically append the tool result to your response.
 Also don't list the available tools unless the user asks for them."""
 
@@ -236,19 +255,31 @@ async def stream_response(messages):
     client = AsyncClient()
     
     try:
-        # Get the streaming response
         stream = await client.chat(
             model=MODEL_NAME,
             messages=messages,
             stream=True
         )
         
-        # Process the streaming response
         async for chunk in stream:
             if hasattr(chunk, 'message') and hasattr(chunk.message, 'content'):
                 content_chunk = chunk.message.content
                 full_response += content_chunk
                 yield content_chunk, False
+                
+        # After streaming is complete, speak the full response if TTS is enabled
+        if tts_settings.enabled and full_response.strip():
+            # Add a space between CU and Air if present in the response
+            full_response = full_response.replace("CUAir", "CU Air")
+            try:
+                tts_engine = pyttsx3.init()
+                tts_engine.say(full_response.strip())
+                tts_engine.runAndWait()
+                del(tts_engine)
+                print("TTS engine has finished speaking")
+            except Exception as e:
+                print(f"TTS error: {str(e)}")
+                
     except Exception as e:
         error_detail = f"Error streaming from Ollama: {str(e)}"
         print(error_detail)
@@ -342,3 +373,18 @@ async def clear_context():
     # This means all future messages will be treated as new context
     context_marker = len(chat_history)
     return {"status": "success", "message": "Context cleared"}
+
+@router.post("/tts/settings")
+async def update_tts_settings(settings: TTSSettings):
+    """Update text-to-speech settings"""
+    global tts_settings
+    tts_settings = settings
+    return {"status": "success", "settings": settings}
+
+@router.get("/tts/settings")
+async def get_tts_settings():
+    """Get current text-to-speech settings"""
+    global tts_settings
+    return tts_settings
+
+

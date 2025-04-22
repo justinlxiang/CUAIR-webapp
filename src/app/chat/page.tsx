@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Trash2, RefreshCw, Send } from 'lucide-react';
+import { Mic, MicOff, Trash2, RefreshCw, Send, Volume2, VolumeX } from 'lucide-react';
 import Header from '../components/Header';
 import { useSharedChat } from '@/contexts/ChatContext';
 import { cn } from '@/lib/utils';
@@ -54,6 +54,8 @@ export default function ChatPage() {
     isLoading,
     isListening,
     isStreaming,
+    voiceEnabled,
+    toggleVoice,
     handleInputChange,
     handleKeyDown,
     handleSendMessage,
@@ -113,6 +115,14 @@ export default function ChatPage() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Nexus AI</h1>
           <div className="flex gap-2">
+            <Button
+              onClick={toggleVoice}
+              variant={voiceEnabled ? "default" : "secondary"}
+              className="flex items-center gap-2"
+            >
+              {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+              {voiceEnabled ? 'Voice On' : 'Voice Off'}
+            </Button>
             <Button 
               onClick={clearContext} 
               className="flex items-center gap-2"
