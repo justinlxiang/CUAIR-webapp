@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket, HTTPException
 from fastapi.websockets import WebSocketDisconnect
-import requests
+import httpx
 import time
 import asyncio
 import logging
@@ -77,23 +77,26 @@ async def detection_websocket_endpoint(websocket: WebSocket):
 @router.post("/stream/start")
 async def start_stream():
     print("Forwarding start request to stream service")
-    response = requests.post(f"{CAMERA_SERVICE_URL}/start", json={"name": "start"}, timeout=3)
-    return response.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{CAMERA_SERVICE_URL}/start", json={"name": "start"}, timeout=3)
+        return response.json()
 
 @router.post("/stream/stop")
 async def stop_stream():
     print("Forwarding stop request to stream service")
-    response = requests.post(f"{CAMERA_SERVICE_URL}/stop", json={"name": "stop"}, timeout=3)
-    return response.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{CAMERA_SERVICE_URL}/stop", json={"name": "stop"}, timeout=3)
+        return response.json()
 
 @router.get("/stream/status")
 async def get_stream_status():
     print("Checking stream service status")
     try:
-        response = requests.get(f"{CAMERA_SERVICE_URL}/status", timeout=3)
-        return response.json()
-    except requests.exceptions.Timeout:
-        return {"isRunning": False, "error": "Request timed out"}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{CAMERA_SERVICE_URL}/status", timeout=3)
+            return response.json()
+    except httpx.TimeoutException:
+        return {"isStreaming": False, "error": "Request timed out"}
     except Exception as e:
         logger.error(f"Error checking stream status: {str(e)}")
-        return {"isRunning": False, "error": str(e)}
+        return {"isStreaming": None, "error": str(e)}

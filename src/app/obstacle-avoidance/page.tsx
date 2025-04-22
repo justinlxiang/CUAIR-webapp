@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import Header from '../components/Header';
 import styles from '../styles/Home.module.css';
 import { lidarWsClient, videoWsClient, WebSocketMessage } from '../api/websocket';
-import Image from 'next/image';
 
 interface Cluster {
   center: [number, number];
@@ -25,11 +24,6 @@ interface LidarData {
   radius_threshold: number;
 }
 
-interface DetectionFrameData {
-  timestamp: number;
-  frame: string;
-}
-
 const getClusterColor = (cluster: Cluster, idx: number) => {
   const colorId = cluster.id ?? idx;
   return `hsl(${(colorId * 137) % 360}, 70%, 50%)`;
@@ -37,7 +31,6 @@ const getClusterColor = (cluster: Cluster, idx: number) => {
 
 export default function Home() {
   const [lidarData, setLidarData] = useState<LidarData | null>(null);
-  const [detectionFrame, setDetectionFrame] = useState<DetectionFrameData | null>(null);
   const [isLidarActive, setIsLidarActive] = useState<boolean | null>(null);
 
   const checkLidarStatus = useCallback(async () => {
@@ -78,50 +71,27 @@ export default function Home() {
     }
   }, []);
 
-  const handleVideoMessage = useCallback((message: WebSocketMessage) => {
-    if (message.type === 'detection_frame') {
-      setDetectionFrame({
-        timestamp: message.data.timestamp,
-        frame: message.data.frame
-      });
-    }
-  }, []);
-
   useEffect(() => {
     // Connect to WebSockets
     lidarWsClient.connect();
     videoWsClient.connect();
     
-    // Check LiDAR status
+    // Check LiDAR status initially
     checkLidarStatus();
+    
+    // Set up polling interval to check LiDAR status every 1 second
+    const statusPollInterval = setInterval(checkLidarStatus, 1000);
     
     // Set up specialized message handlers
     lidarWsClient.onMessage(handleLidarMessage);
-    videoWsClient.onMessage(handleVideoMessage);
     
-    // Clean up WebSocket connections when component unmounts
+    // Clean up WebSocket connections and interval when component unmounts
     return () => {
+      clearInterval(statusPollInterval);
       lidarWsClient.disconnect();
       videoWsClient.disconnect();
     };
-  }, [checkLidarStatus, handleLidarMessage, handleVideoMessage]);
-
-  const renderDetectionFrame = useMemo(() => {
-    if (!detectionFrame) return null;
-    return (
-      <Image
-        src={`data:image/jpeg;base64,${detectionFrame.frame}`}
-        alt="Detection Frame"
-        className="w-full h-full object-cover"
-        width={1280}
-        height={720}
-        onError={(e) => console.error('Error loading image:', e)}
-        priority
-        unoptimized
-        key="detection-frame-image"
-      />
-    );
-  }, [detectionFrame]);
+  }, [checkLidarStatus, handleLidarMessage]);
 
   const renderClusters = useMemo(() => {
     if (!lidarData?.clusters) return null;
@@ -183,19 +153,6 @@ export default function Home() {
               </div>
             </Card>
           </div>
-          
-          {/* <div className="mt-8 flex flex-col gap-4">
-            <Card className={`bg-card border-border p-4 ${styles.card}`}>
-              <h2 className="text-xl font-bold text-card-foreground mb-4">Detection Frame Feed</h2>
-              <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
-                {renderDetectionFrame || (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    No detection frame available
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div> */}
         </div>
       </main>
     </>

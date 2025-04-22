@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, WebSocket
 from fastapi.websockets import WebSocketDisconnect
-import requests
+import httpx
 import asyncio
 import logging
 from websocket_manager import WebSocketManager
@@ -86,23 +86,26 @@ async def receive_lidar_data(data: dict):
 @router.post("/lidar/start")
 async def start_lidar():
     print("Forwarding start request to LiDAR service")
-    response = requests.post(f"{LIDAR_SERVICE_URL}/start", json={"name": "start"}, timeout=3)
-    return response.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{LIDAR_SERVICE_URL}/start", json={"name": "start"}, timeout=3)
+        return response.json()
 
 @router.post("/lidar/stop")
 async def stop_lidar():
     print("Forwarding stop request to LiDAR service")
-    response = requests.post(f"{LIDAR_SERVICE_URL}/stop", json={"name": "stop"}, timeout=3) 
-    return response.json()
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{LIDAR_SERVICE_URL}/stop", json={"name": "stop"}, timeout=3)
+        return response.json()
 
 @router.get("/lidar/status")
 async def get_status():
     print("Checking LiDAR service status")
     try:
-        response = requests.get(f"{LIDAR_SERVICE_URL}/status", timeout=3)
-        return response.json()
-    except requests.exceptions.Timeout:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{LIDAR_SERVICE_URL}/status", timeout=3)
+            return response.json()
+    except httpx.TimeoutException:
         return {"isRunning": False, "error": "Request timed out"}
     except Exception as e:
         logger.error(f"Error checking LiDAR status: {str(e)}")
-        return {"isRunning": False, "error": str(e)}
+        return {"isRunning": None, "error": str(e)}

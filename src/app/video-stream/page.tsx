@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Header from '../components/Header';
@@ -16,6 +16,7 @@ interface DetectionFrameData {
 export default function Home() {
   const [detectionFrame, setDetectionFrame] = useState<DetectionFrameData | null>(null);
   const [isStreamActive, setIsStreamActive] = useState<boolean | null>(null);
+  const hasExplicitlyStopped = useRef(false);
 
   const checkStreamStatus = useCallback(async () => {
     try {
@@ -23,6 +24,7 @@ export default function Home() {
       if (response.ok) {
         const status = await response.json();
         setIsStreamActive(status.isStreaming);
+        hasExplicitlyStopped.current = !status.isStreaming;
       }
     } catch (error) {
       console.error('Error checking stream status:', error);
@@ -43,6 +45,7 @@ export default function Home() {
         throw new Error(`Failed to ${endpoint} stream`);
       }
       setIsStreamActive(!isStreamActive);
+      hasExplicitlyStopped.current = endpoint === 'stop';
     } catch (error) {
       console.error(`Error ${isStreamActive ? 'stopping' : 'starting'} stream:`, error);
     }
@@ -52,8 +55,11 @@ export default function Home() {
     // Connect to WebSockets
     videoWsClient.connect();
     
-    // Check stream status
+    // Check stream status initially
     checkStreamStatus();
+    
+    // Set up polling interval to check stream status every 1 second
+    const statusPollInterval = setInterval(checkStreamStatus, 1000);
     
     videoWsClient.onMessage((message) => {
       if (message.type === 'detection_frame') {
@@ -61,11 +67,16 @@ export default function Home() {
           timestamp: message.data.timestamp,
           frame: message.data.frame
         });
+        // Only update stream status if we haven't explicitly stopped
+        if (!hasExplicitlyStopped.current) {
+          setIsStreamActive(true);
+        }
       }
     });
     
-    // Clean up WebSocket connections when component unmounts
+    // Clean up WebSocket connections and interval when component unmounts
     return () => {
+      clearInterval(statusPollInterval);
       lidarWsClient.disconnect();
       videoWsClient.disconnect();
     };
