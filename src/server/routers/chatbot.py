@@ -66,7 +66,7 @@ async def start_lidar():
         if response.get("status") == "success":
             return "Tool call successful: LIDAR system activated successfully"
     except Exception as e:
-        return f"Tool call failed: {str(e)}"
+        return f"Tool call failed."
 
 async def stop_lidar():
     """Stop the LIDAR system"""
@@ -75,7 +75,7 @@ async def stop_lidar():
     if response.get("status") == "success":
         return "Tool call successful: LIDAR system deactivated successfully"
     else:
-        return f"Tool call failed: {response.get('error', 'Unknown error')}"
+        return f"Tool call failed."
     
 async def start_video_stream():
     """Start the video stream from the aircraft camera"""
@@ -84,7 +84,7 @@ async def start_video_stream():
     if response.get("status") == "success":
         return "Tool call successful: Video stream started successfully"
     else:
-        return f"Tool call failed: {response.get('error', 'Unknown error')}"
+        return f"Tool call failed."
 
 async def stop_video_stream():
     """Stop the video stream from the aircraft camera"""
@@ -93,7 +93,7 @@ async def stop_video_stream():
     if response.get("status") == "success":
         return "Tool call successful: Video stream stopped successfully"
     else:
-        return f"Tool call failed: {response.get('error', 'Unknown error')}"
+        return f"Tool call failed."
 
 def get_altitude():
     """Get the altitude of the aircraft"""
@@ -249,6 +249,12 @@ async def check_tool_decision(tool_decision_messages):
         
     return tool_needed, tool_result
 
+def engine_init():
+    """Initialize and return a fresh TTS engine instance"""
+    importlib.reload(pyttsx3)  # Workaround to avoid pyttsx3 getting stuck
+    engine = pyttsx3.init()
+    return engine
+
 async def stream_response(messages):
     """Stream the response from Ollama"""
     full_response = ""
@@ -267,18 +273,6 @@ async def stream_response(messages):
                 full_response += content_chunk
                 yield content_chunk, False
                 
-        # After streaming is complete, speak the full response if TTS is enabled
-        if tts_settings.enabled and full_response.strip():
-            # Add a space between CU and Air if present in the response
-            full_response = full_response.replace("CUAir", "CU Air")
-            try:
-                tts_engine = pyttsx3.init()
-                tts_engine.say(full_response.strip())
-                tts_engine.runAndWait()
-                del(tts_engine)
-                print("TTS engine has finished speaking")
-            except Exception as e:
-                print(f"TTS error: {str(e)}")
                 
     except Exception as e:
         error_detail = f"Error streaming from Ollama: {str(e)}"
@@ -342,6 +336,21 @@ async def chat_stream(request: ChatRequest):
                     chunk_data = {'chunk': '\n\n' + tool_result, 'done': False}
                     yield f"data: {json.dumps(chunk_data)}\n\n"
             
+            # After streaming is complete, speak the full response if TTS is enabled
+            if tts_settings.enabled and full_response.strip():
+                # Add a space between CU and Air if present in the response
+                full_response = full_response.replace("CUAir", "CU Air")
+                try:
+                    importlib.reload(pyttsx3)
+                    engine = engine_init()  # Get a fresh engine instance
+                    engine.setProperty('rate', tts_settings.rate)
+                    engine.say(full_response.strip())
+                    engine.runAndWait()
+                    del engine  # Clean up the engine instance
+                    print("TTS engine has finished speaking")
+                except Exception as e:
+                    print(f"TTS error: {str(e)}")
+
             # Signal that streaming is complete
             yield f"data: {json.dumps({'chunk': '', 'done': True})}\n\n"
         
