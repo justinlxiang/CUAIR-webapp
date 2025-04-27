@@ -28,7 +28,7 @@ router = APIRouter()
 class TTSSettings(BaseModel):
     enabled: bool
     voice_id: Optional[str] = None
-    rate: Optional[int] = 200
+    rate: Optional[int] = 250
     volume: Optional[float] = 1.0
 
 # Global TTS settings
@@ -340,16 +340,24 @@ async def chat_stream(request: ChatRequest):
             if tts_settings.enabled and full_response.strip():
                 # Add a space between CU and Air if present in the response
                 full_response = full_response.replace("CUAir", "CU Air")
-                try:
-                    importlib.reload(pyttsx3)
-                    engine = engine_init()  # Get a fresh engine instance
-                    engine.setProperty('rate', tts_settings.rate)
-                    engine.say(full_response.strip())
-                    engine.runAndWait()
-                    del engine  # Clean up the engine instance
-                    print("TTS engine has finished speaking")
-                except Exception as e:
-                    print(f"TTS error: {str(e)}")
+                
+                # Define a function to run TTS in a separate thread
+                def run_tts_in_thread(text, rate):
+                    try:
+                        importlib.reload(pyttsx3)
+                        engine = engine_init()  # Get a fresh engine instance
+                        engine.setProperty('rate', rate)
+                        engine.say(text.strip())
+                        engine.runAndWait()
+                        del engine  # Clean up the engine instance
+                        print("TTS engine has finished speaking")
+                    except Exception as e:
+                        print(f"TTS error: {str(e)}")
+                
+                # Start TTS in a separate thread
+                tts_thread = Thread(target=run_tts_in_thread, args=(full_response, tts_settings.rate))
+                tts_thread.daemon = True  # Make thread exit when main thread exits
+                tts_thread.start()
 
             # Signal that streaming is complete
             yield f"data: {json.dumps({'chunk': '', 'done': True})}\n\n"

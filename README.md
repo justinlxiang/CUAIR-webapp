@@ -73,7 +73,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 Start the FastAPI server:
 
 ```bash
-npm run start-backend
+npm run backend
 # or
 cd src/server
 uvicorn main:app --host 0.0.0.0 --reload --port 8888

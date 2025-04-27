@@ -1,8 +1,8 @@
 from pathlib import Path
 
 # Service URLs
-LIDAR_SERVICE_URL = "http://10.49.62.165:5000"
-CAMERA_SERVICE_URL = "http://10.49.62.165:6000"
+LIDAR_SERVICE_URL = "http://10.49.33.224:5000"
+CAMERA_SERVICE_URL = "http://10.49.33.224:6000"
 MAPPING_SERVICE_URL = "http://127.0.0.1:8000"
 
 # Directories for storing mapping data
